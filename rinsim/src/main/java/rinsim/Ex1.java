@@ -39,7 +39,7 @@ import com.github.rinde.rinsim.ui.renderers.RoadUserRenderer;
  *
  * @author Rinde van Lon
  */
-public final class exampleExtended {
+public final class Ex1 {
 
   static final double VEHICLE_SPEED_KMH = 50d;
   static final Point MIN_POINT = new Point(0, 0);
@@ -50,11 +50,8 @@ public final class exampleExtended {
 
   static final int TEST_SPEEDUP = 16;
   static final long TEST_STOP_TIME = 10 * 60 * 1000;
-  
-  static final Point[] destinations = new Point[NUM_VEHICLES];
-  static int i = 0;
 
-  private exampleExtended() {}
+  private Ex1() {}
 
   /**
    * Starts the example.
@@ -122,7 +119,7 @@ public final class exampleExtended {
     // RoadModel. The TickListener interface indicates that this class wants
     // to keep track of time. The RandomUser interface indicates that this class
     // wants to get access to a random generator
-
+	   int i = 0;
     RoadModel roadModel;
     final RandomGenerator rnd;
     int thisi;
@@ -137,12 +134,6 @@ public final class exampleExtended {
       // this is where we receive an instance to the model. we store the
       // reference and add ourselves to the model on a random position.
       roadModel = model;
-      
-      // Set an index for this roaduser.
-      thisi = i;
-      
-      // Initialize random position for starting purposes.
-      destinations[i++] = roadModel.getRandomPosition(rnd);
     }
 
     @Override
@@ -154,13 +145,13 @@ public final class exampleExtended {
         roadModel.addObjectAt(this, roadModel.getRandomPosition(rnd));
       }
 
-      // If previous position has been reached, pick a new one.
-      if(roadModel.getPosition(this) == destinations[thisi]) {
-    	  destinations[thisi] = roadModel.getRandomPosition(rnd);
-      }
-      
-      // Move to the current target position.
-      roadModel.moveTo(this, destinations[thisi], timeLapse);
+   
+      if(roadModel.getDestination(this) == null || roadModel.getDestination(this) == roadModel.getPosition(this)) 
+    	  roadModel.moveTo(this,  roadModel.getRandomPosition(rnd), timeLapse);
+      else 
+    	  roadModel.moveTo(this, roadModel.getDestination(this), timeLapse);
+
+
     }
 
     @Override
