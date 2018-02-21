@@ -28,6 +28,7 @@ import com.github.rinde.rinsim.core.model.time.TimeLapse;
 import com.github.rinde.rinsim.geom.Point;
 import com.github.rinde.rinsim.ui.renderers.GraphRoadModelRenderer;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableSet;
 
 class AGVAgent implements TickListener, MovingRoadUser {
   private final RandomGenerator rng;
@@ -67,15 +68,23 @@ class AGVAgent implements TickListener, MovingRoadUser {
 
   @Override
   public void tick(TimeLapse timeLapse) {
-    if (!destination.isPresent()) {
-      nextDestination();
+
+    while (roadModel.get().isOccupied(path.peek()) || roadModel.get().getOccupiedNodes().contains(path.peek())){
+       	if(roadModel.get().getRoadUsersOnNode(path.peek()).size() == 1 && roadModel.get().getRoadUsersOnNode(path.peek()).contains(this))
+       		break;
+       	nextDestination();
     }
+    
+    if (!destination.isPresent()) {
+        nextDestination();
+      }
     
     roadModel.get().followPath(this, path, timeLapse);
 
     if (roadModel.get().getPosition(this).equals(destination.get())) {
       nextDestination();
     }
+
   }
 
   @Override
