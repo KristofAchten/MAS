@@ -21,6 +21,7 @@ import java.util.Queue;
 import org.apache.commons.math3.random.RandomGenerator;
 
 import com.github.rinde.rinsim.core.model.road.CollisionGraphRoadModelImpl;
+import com.github.rinde.rinsim.core.model.road.DeadlockException;
 import com.github.rinde.rinsim.core.model.road.MovingRoadUser;
 import com.github.rinde.rinsim.core.model.road.RoadModel;
 import com.github.rinde.rinsim.core.model.time.TickListener;
@@ -68,23 +69,30 @@ class AGVAgent implements TickListener, MovingRoadUser {
 
   @Override
   public void tick(TimeLapse timeLapse) {
-
-    while (roadModel.get().isOccupied(path.peek()) || roadModel.get().getOccupiedNodes().contains(path.peek())){
-       	if(roadModel.get().getRoadUsersOnNode(path.peek()).size() == 1 && roadModel.get().getRoadUsersOnNode(path.peek()).contains(this))
-       		break;
-       	nextDestination();
-    }
     
     if (!destination.isPresent()) {
         nextDestination();
       }
     
-    roadModel.get().followPath(this, path, timeLapse);
+    try {
+    	roadModel.get().followPath(this, path, timeLapse);
+    } catch (DeadlockException e) {
+    	getNewFreeDestination();
+    }
 
     if (roadModel.get().getPosition(this).equals(destination.get())) {
       nextDestination();
     }
 
+  }
+  
+  public void getNewFreeDestination() {
+	  nextDestination(); 
+	  while (roadModel.get().isOccupied(path.peek()) || roadModel.get().getOccupiedNodes().contains(path.peek())){
+	       	if(roadModel.get().getRoadUsersOnNode(path.peek()).size() == 1 && roadModel.get().getRoadUsersOnNode(path.peek()).contains(this))
+	       		break;
+	       	nextDestination();
+	    }
   }
 
   @Override
