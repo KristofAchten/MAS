@@ -1,5 +1,13 @@
 package rinsim;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.URISyntaxException;
+import java.net.URL;
+
 import org.apache.commons.math3.random.RandomGenerator;
 
 import com.github.rinde.rinsim.core.Simulator;
@@ -7,6 +15,7 @@ import com.github.rinde.rinsim.core.model.pdp.DefaultPDPModel;
 import com.github.rinde.rinsim.core.model.pdp.Parcel;
 import com.github.rinde.rinsim.core.model.road.RoadModel;
 import com.github.rinde.rinsim.core.model.road.RoadModelBuilders;
+import com.github.rinde.rinsim.geom.Point;
 import com.github.rinde.rinsim.ui.View;
 import com.github.rinde.rinsim.ui.View.Builder;
 import com.github.rinde.rinsim.ui.renderers.GraphRoadModelRenderer;
@@ -16,19 +25,19 @@ public class PeopleMover {
 	
 	private static final int NUM_PODS = 5;
 	private static final int NUM_LOADINGDOCKS = 3;
-	private static final int NUM_USERS = 30;
+	private static final int NUM_USERS = 2;
 	private static final int MAX_PODCAPACITY = 4;
 	private static final int MAX_CHARGECAPACITY = 1; 
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws URISyntaxException, IOException {
 		PeopleMover pm = new PeopleMover();
 		pm.run();
 	}
 	
 	PeopleMover() {}
 	
-	private void run() {
-		
+	private void run() throws URISyntaxException, IOException {
+	
 		GraphModel gm = new GraphModel();
 		Builder view = createGui();
 
@@ -41,8 +50,8 @@ public class PeopleMover {
 		final RandomGenerator r = simulator.getRandomGenerator();
 		final RoadModel roadModel = simulator.getModelProvider().getModel(RoadModel.class);
 		
-		for(int i = 0; i < NUM_PODS; i++) {
-			simulator.register(new Pod(roadModel.getRandomPosition(r), MAX_PODCAPACITY));
+		for(Point p : gm.getGraph().getNodes()) {
+			simulator.register(new Station(p));
 		}
 		
 		for(int i = 0; i < NUM_LOADINGDOCKS; i++) {
@@ -55,16 +64,23 @@ public class PeopleMover {
 					roadModel.getRandomPosition(r))
 					.buildDTO()));
 		}
+		
+		for(int i = 0; i < NUM_PODS; i++) {
+			simulator.register(new Pod(roadModel.getRandomPosition(r), MAX_PODCAPACITY));
+		}
 		System.out.println("running.");
 		
 		simulator.start();
 	}
 
 	  static View.Builder createGui() {
-
 		    View.Builder view = View.builder()
 		      .with(GraphRoadModelRenderer.builder())
-		      .with(RoadUserRenderer.builder())
+		      .with(RoadUserRenderer.builder()		      
+		    		  .withImageAssociation(User.class, "/littletom.png")
+		    		  .withImageAssociation(Pod.class, "/graphics/flat/taxi-32.png")
+		    		  .withImageAssociation(Station.class, "/graphics/flat/bus-stop-icon-32.png")
+		    		  .withImageAssociation(LoadingDock.class, "/graphics/perspective/tall-building-64.png"))
 		      .withTitleAppendix("People Mover 2000");
 		    return view;
 		  }
