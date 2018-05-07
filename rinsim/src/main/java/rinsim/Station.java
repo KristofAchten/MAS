@@ -3,6 +3,7 @@ package rinsim;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Random;
 
 import com.github.rinde.rinsim.core.model.pdp.Depot;
 import com.github.rinde.rinsim.geom.Point;
@@ -19,19 +20,20 @@ public class Station extends Depot {
 	private ArrayList<RoadSign> roadsigns = new ArrayList<>();
 	private ArrayList<Station> neighbours = new ArrayList<>();
 	private Pod pod = null;
+	private Random rand = new Random();
 
 	public Station(Point position) {
 		super(position);
 		setCapacity(1);
 	}
 	
-	public void receiveAnt(String type, Station sender, long preferredTime, ArrayList<Reservation> res) {
+	public void receiveAnt(String type, RoadSign roadSign, long preferredTime, ArrayList<Reservation> res) {
 		switch(type) {
 		case "reservation":
 			makeReservation(res, preferredTime);
 			break;
 		case "roadsign":
-			makeRoadsign(sender);
+			makeRoadsign(roadSign);
 			break;
 		default:
 		}
@@ -40,7 +42,7 @@ public class Station extends Depot {
 	
 	public void sendReservationAnt(ArrayList<Reservation> res, long preferredTime) {
 		Station receiver = res.get(0).getStation();
-		receiver.receiveAnt("reservation", this, preferredTime, res);
+		receiver.receiveAnt("reservation", null, preferredTime, res);
 	}
 	
 	public void sendRoadsignAnt() {
@@ -96,8 +98,20 @@ public class Station extends Depot {
 		correctReservation.getPrevStation().sendConfirmation(res);
 	}
 	
-	private void makeRoadsign(Station sender) {
-
+	private void makeRoadsign(RoadSign previous) {
+		RoadSign sign = new RoadSign();
+		ArrayList<Station> previousStations = previous.getPreviousStations();
+		int hops = previous.getHops();
+		sign.setHops(hops - 1);
+		previousStations.add(this);
+		sign.setPreviousStations(previousStations);
+		this.roadsigns.add(sign);
+		
+		if(hops >= 0) {
+			int  n = rand.nextInt(this.neighbours.size()) + 1;
+			this.neighbours.get(n).receiveAnt("roadsign", sign, 0, null);
+		}
+		
 	}
 	
 	private TimeWindow checkPossibleReservationTime(long time) {
