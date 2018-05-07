@@ -5,11 +5,9 @@ import com.github.rinde.rinsim.geom.Point;
 
 public class LoadingDock extends Depot {
 
-	public LoadingDock(Point position, double cap) {
+	public LoadingDock(Point position, int cap) {
 		super(position);
 		setCapacity(cap);
 	}
 
-	
-	
 }

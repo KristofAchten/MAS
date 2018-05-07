@@ -1,5 +1,7 @@
 package rinsim;
 
+import java.util.ArrayList;
+
 import com.github.rinde.rinsim.core.model.pdp.Vehicle;
 import com.github.rinde.rinsim.core.model.pdp.VehicleDTO;
 import com.github.rinde.rinsim.core.model.time.TimeLapse;
@@ -19,6 +21,11 @@ class Pod extends Vehicle {
 
 	@Override
 	protected void tickImpl(TimeLapse time) {
+	}
+
+	public void confirmReservations(ArrayList<Reservation> res) {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

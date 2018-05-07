@@ -25,7 +25,7 @@ public class PeopleMover {
 	
 	private static final int NUM_PODS = 5;
 	private static final int NUM_LOADINGDOCKS = 3;
-	private static final int NUM_USERS = 2;
+	private static final int NUM_USERS = 20;
 	private static final int MAX_PODCAPACITY = 4;
 	private static final int MAX_CHARGECAPACITY = 1; 
 	
