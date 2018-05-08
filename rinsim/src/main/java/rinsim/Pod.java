@@ -3,14 +3,18 @@ package rinsim;
 import java.util.ArrayList;
 import java.util.Collections;
 
+import org.omg.CORBA.Current;
+
 import com.github.rinde.rinsim.core.model.pdp.Vehicle;
 import com.github.rinde.rinsim.core.model.pdp.VehicleDTO;
 import com.github.rinde.rinsim.core.model.time.TimeLapse;
 import com.github.rinde.rinsim.geom.Point;
 
 class Pod extends Vehicle {
+	private static final int START_HOP_COUNT = 10;
 
 	private ArrayList<Reservation> desire;
+	private ArrayList<ArrayList<Station>> intentions;
 	private ArrayList<User> passengers;
 	private Station current; 
 	
@@ -37,8 +41,17 @@ class Pod extends Vehicle {
 			ArrayList<RoadSign> rs = current.getRoadsigns();
 			if(!rs.isEmpty()) {
 				Collections.sort(rs);
-				//current.receiveAnt("reservation", null, System.currentTimeMillis(), null);
-				//setDesire(rs.get(0).getPreviousStations());
+				Station dest = rs.get(0).getEndStation();
+				getIntentions().clear();
+				current.receiveExplorationAnt(new ArrayList<Station>(), dest, START_HOP_COUNT);
+				
+				ArrayList<Station> curBest = getIntentions().get(0);
+				for(ArrayList<Station> i : getIntentions()) {
+					if(i.size() < curBest.size()) {
+						curBest = i;
+					}
+				}
+				makeReservations(curBest);
 			} else {
 				// Random buur
 			}
@@ -63,8 +76,19 @@ class Pod extends Vehicle {
 		}
 	}
 
+	private void makeReservations(ArrayList<Station> curBest) {
+		ArrayList<Reservation> res = new ArrayList<Reservation>();
+		Station prev = null;
+		for(Station s : curBest) {
+			res.add(new Reservation(s, prev, null, 0, this));
+			prev = s;
+		}
+		current.receiveReservationAnt(res, System.currentTimeMillis());
+	}
+
 	public void confirmReservations(ArrayList<Reservation> res) {
-		this.desire = res;
+		Collections.reverse(res);
+		setDesire(res);
 	}
 
 	public ArrayList<Reservation> getDesire() {
@@ -92,7 +116,15 @@ class Pod extends Vehicle {
 	}
 
 	public void receiveExplorationResult(ArrayList<Station> prev) {
-		
+		this.getIntentions().add(prev);
+	}
+
+	public ArrayList<ArrayList<Station>> getIntentions() {
+		return intentions;
+	}
+
+	public void setIntentions(ArrayList<ArrayList<Station>> intentions) {
+		this.intentions = intentions;
 	}
 
 }

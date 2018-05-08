@@ -1,12 +1,7 @@
 package rinsim;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.URISyntaxException;
-import java.net.URL;
-
 import org.apache.commons.math3.random.RandomGenerator;
 
 import com.github.rinde.rinsim.core.Simulator;
