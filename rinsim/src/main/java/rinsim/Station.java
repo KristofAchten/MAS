@@ -19,6 +19,7 @@ public class Station extends Depot {
 	private ArrayList<Reservation> reservations = new ArrayList<>();
 	private ArrayList<RoadSign> roadsigns = new ArrayList<>();
 	private ArrayList<Station> neighbours = new ArrayList<>();
+	private ArrayList<User> passengers = new ArrayList<>();
 	private Pod pod = null;
 	private Random rand = new Random();
 
@@ -27,26 +28,37 @@ public class Station extends Depot {
 		setCapacity(1);
 	}
 	
-	public void receiveAnt(String type, RoadSign roadSign, long preferredTime, ArrayList<Reservation> res) {
-		switch(type) {
-		case "reservation":
-			makeReservation(res, preferredTime);
-			break;
-		case "roadsign":
-			makeRoadsign(roadSign);
-			break;
-		default:
-		}
-		
+	public void receiveExplorationAnt(ArrayList<Station> prev, Station dest, int hop) {
+		forwardExploration(prev, dest, hop);
+	}
+	public void receiveReservationAnt(ArrayList<Reservation> res, long preferredTime) {
+		makeReservation(res, preferredTime);
+	}
+	public void receiveRoadSignAnt(RoadSign prev) {
+		makeRoadsign(prev);
 	}
 	
+	
+	
+	private void forwardExploration(ArrayList<Station> prev, Station dest, int hop) {
+		if(hop == 0 || this == dest ) {
+			int index = prev.indexOf(this);
+			if(index == 0) {
+				getPod().receiveExplorationResult(prev);
+				return;
+			}
+			prev.get(index-1).receiveExplorationAnt(prev, dest, hop);
+		} else {
+			prev.add(this);
+			for(Station s : getNeighbours()) {
+				s.receiveExplorationAnt(prev, dest, hop - 1);
+			}
+		}
+	}
+
 	public void sendReservationAnt(ArrayList<Reservation> res, long preferredTime) {
 		Station receiver = res.get(0).getStation();
-		receiver.receiveAnt("reservation", null, preferredTime, res);
-	}
-	
-	public void sendRoadsignAnt() {
-		
+		receiver.receiveReservationAnt(res, preferredTime);
 	}
 	
 	private void makeReservation(ArrayList<Reservation> res, long preferredTime) {
@@ -100,18 +112,15 @@ public class Station extends Depot {
 	
 	private void makeRoadsign(RoadSign previous) {
 		RoadSign sign = new RoadSign();
-		ArrayList<Station> previousStations = previous.getPreviousStations();
 		int hops = previous.getHops();
 		sign.setHops(hops - 1);
-		previousStations.add(this);
-		sign.setPreviousStations(previousStations);
+		sign.setEndStation(previous.getEndStation());
 		this.roadsigns.add(sign);
 		
 		if(hops >= 0) {
 			int  n = rand.nextInt(this.neighbours.size()) + 1;
-			this.neighbours.get(n).receiveAnt("roadsign", sign, 0, null);
+			this.neighbours.get(n).receiveRoadSignAnt(sign);
 		}
-		
 	}
 	
 	private TimeWindow checkPossibleReservationTime(long time) {
@@ -122,6 +131,50 @@ public class Station extends Depot {
 				ret = checkPossibleReservationTime(time);
 			}
 		return ret;		
+	}
+
+	public void embarkUser(User u) {
+		this.passengers.remove(u);
+	}
+	
+	public ArrayList<User> getPassengers() {
+		return passengers;
+	}
+
+	public void setPassengers(ArrayList<User> passengers) {
+		this.passengers = passengers;
+	}
+
+	public ArrayList<Reservation> getReservations() {
+		return reservations;
+	}
+
+	public void setReservations(ArrayList<Reservation> reservations) {
+		this.reservations = reservations;
+	}
+
+	public ArrayList<RoadSign> getRoadsigns() {
+		return roadsigns;
+	}
+
+	public void setRoadsigns(ArrayList<RoadSign> roadsigns) {
+		this.roadsigns = roadsigns;
+	}
+
+	public ArrayList<Station> getNeighbours() {
+		return neighbours;
+	}
+
+	public void setNeighbours(ArrayList<Station> neighbours) {
+		this.neighbours = neighbours;
+	}
+
+	public Pod getPod() {
+		return pod;
+	}
+
+	public void setPod(Pod pod) {
+		this.pod = pod;
 	}
 
 	

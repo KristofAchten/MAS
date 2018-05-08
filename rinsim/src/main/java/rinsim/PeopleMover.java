@@ -1,6 +1,5 @@
 package rinsim;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -62,11 +61,11 @@ public class PeopleMover {
 			simulator.register(new User
 					(Parcel.builder (roadModel.getRandomPosition(r), 
 					roadModel.getRandomPosition(r))
-					.buildDTO()));
+					.buildDTO(), 0, null));
 		}
 		
 		for(int i = 0; i < NUM_PODS; i++) {
-			simulator.register(new Pod(roadModel.getRandomPosition(r), MAX_PODCAPACITY));
+			simulator.register(new Pod(roadModel.getRandomPosition(r), MAX_PODCAPACITY, null));
 		}
 		System.out.println("running.");
 		
