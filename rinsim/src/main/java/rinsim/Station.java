@@ -22,9 +22,11 @@ public class Station extends Depot {
 	private ArrayList<User> passengers = new ArrayList<>();
 	private Pod pod = null;
 	private Random rand = new Random();
+	private Point position;
 
 	public Station(Point position) {
-		super(position);
+		super(position);		
+		setPosition(position);
 		setCapacity(1);
 	}
 	
@@ -118,7 +120,8 @@ public class Station extends Depot {
 		this.roadsigns.add(sign);
 		
 		if(hops >= 0) {
-			int  n = rand.nextInt(this.neighbours.size()) + 1;
+			int  n = rand.nextInt(this.neighbours.size());
+			System.out.println(n);
 			this.neighbours.get(n).receiveRoadSignAnt(sign);
 		}
 	}
@@ -177,6 +180,11 @@ public class Station extends Depot {
 		this.pod = pod;
 	}
 
-	
-	
+	public Point getPosition() {
+		return position;
+	}
+
+	public void setPosition(Point position) {
+		this.position = position;
+	}	
 }

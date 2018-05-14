@@ -2,6 +2,9 @@ package rinsim;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Random;
+
 import org.apache.commons.math3.random.RandomGenerator;
 
 import com.github.rinde.rinsim.core.Simulator;
@@ -9,6 +12,9 @@ import com.github.rinde.rinsim.core.model.pdp.DefaultPDPModel;
 import com.github.rinde.rinsim.core.model.pdp.Parcel;
 import com.github.rinde.rinsim.core.model.road.RoadModel;
 import com.github.rinde.rinsim.core.model.road.RoadModelBuilders;
+import com.github.rinde.rinsim.core.model.time.TickListener;
+import com.github.rinde.rinsim.core.model.time.TimeLapse;
+import com.github.rinde.rinsim.geom.Connection;
 import com.github.rinde.rinsim.geom.Point;
 import com.github.rinde.rinsim.ui.View;
 import com.github.rinde.rinsim.ui.View.Builder;
@@ -19,9 +25,13 @@ public class PeopleMover {
 	
 	private static final int NUM_PODS = 5;
 	private static final int NUM_LOADINGDOCKS = 3;
-	private static final int NUM_USERS = 20;
+	private static final int NUM_USERS = 2;
 	private static final int MAX_PODCAPACITY = 4;
 	private static final int MAX_CHARGECAPACITY = 1; 
+	private static final double SPAWN_RATE = 0.01;
+	
+	private Random r = new Random();
+	private ArrayList<Station> stations = new ArrayList<>();
 	
 	public static void main(String[] args) throws URISyntaxException, IOException {
 		PeopleMover pm = new PeopleMover();
@@ -45,24 +55,89 @@ public class PeopleMover {
 		final RoadModel roadModel = simulator.getModelProvider().getModel(RoadModel.class);
 		
 		for(Point p : gm.getGraph().getNodes()) {
-			simulator.register(new Station(p));
+			Station s = new Station(p);
+			addStation(s);
+			simulator.register(s);
 		}
 		
 		for(int i = 0; i < NUM_LOADINGDOCKS; i++) {
 			simulator.register(new LoadingDock(roadModel.getRandomPosition(r), MAX_CHARGECAPACITY));
 		}
 		
+		for(Connection c : gm.getGraph().getConnections()) {
+			Station s1 = getStationAtPoint(c.from());
+			Station s2 = getStationAtPoint(c.to());
+			
+			s1.getNeighbours().add(s2);
+			s2.getNeighbours().add(s1);
+		}
+		
 		for(int i = 0;  i < NUM_USERS; i++) {
-			simulator.register(new User
+			Point pos = roadModel.getRandomPosition(r);
+			User u = new User
 					(Parcel.builder (roadModel.getRandomPosition(r), 
-					roadModel.getRandomPosition(r))
-					.buildDTO(), 0, null));
+					pos)
+					.buildDTO(), 0, null);
+			
+			simulator.register(u);
+
+			for(Station s : getStations()) {
+				if(s.getPosition().equals(pos)) {
+					s.getPassengers().add(u);
+					break;
+				}
+			}
 		}
 		
 		for(int i = 0; i < NUM_PODS; i++) {
 			simulator.register(new Pod(roadModel.getRandomPosition(r), MAX_PODCAPACITY, null));
 		}
-		System.out.println("running.");
+		
+		simulator.addTickListener(new TickListener() {
+			@Override
+			public void tick(TimeLapse timeLapse) {
+				if(r.nextDouble() < SPAWN_RATE) {
+					simulator.register(new User
+							(Parcel.builder (roadModel.getRandomPosition(r), 
+							roadModel.getRandomPosition(r))
+							.buildDTO(), 0, null));
+				}
+				
+				for(Station s : getStations()) {
+					System.out.println(s.getRoadsigns().size());
+					// Update strengths
+					ArrayList<RoadSign> toRemove = new ArrayList<>();
+					for(RoadSign rs : s.getRoadsigns()) {
+						double str = rs.getStrength();
+						
+						if(str < 0.0001) {
+							toRemove.add(rs);
+						} else {
+							rs.setStrength(str/2);
+						}
+					}
+					s.getRoadsigns().removeAll(toRemove);
+					
+					// Remove expired reservations
+					for(Reservation r : s.getReservations()) {
+						if(r.getExpirationTime() >= System.currentTimeMillis()) {
+							s.getReservations().remove(r);
+						}
+					}
+					
+					// Send out feasability ants
+					if(!s.getPassengers().isEmpty()) {
+						for(User u : s.getPassengers()) {
+							RoadSign rs = new RoadSign();
+							rs.setEndStation(u.getDestination());
+							s.receiveRoadSignAnt(rs);
+						}
+					}
+				}		
+		}			
+			@Override
+			public void afterTick(TimeLapse timeLapse) {}
+		});
 		
 		simulator.start();
 	}
@@ -78,5 +153,22 @@ public class PeopleMover {
 		      .withTitleAppendix("People Mover 2000");
 		    return view;
 		  }
+
+	public ArrayList<Station> getStations() {
+		return stations;
+	}
+
+	public void addStation(Station station) {
+		this.stations.add(station);
+	}
+	
+	public Station getStationAtPoint(Point p) {
+		for(Station s : getStations()) {
+			if(s.getPosition().equals(p)) {
+				return s;
+			}
+		}
+		return null;
+	}
 	
 }
