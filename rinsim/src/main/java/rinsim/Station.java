@@ -43,17 +43,25 @@ public class Station extends Depot {
 	
 	
 	private void forwardExploration(ArrayList<Station> prev, Station dest, int hop) {
-		if(hop == 0 || this == dest ) {
+		
+		if((hop == 0 && this != dest) || (prev.contains(this) && hop != -1))
+			return;
+		
+		if(this == dest) {
+			prev.add(this);
+		}
+
+		if(this == dest || hop == -1) {
 			int index = prev.indexOf(this);
 			if(index == 0) {
 				getPod().receiveExplorationResult(prev);
 				return;
 			}
-			prev.get(index-1).receiveExplorationAnt(prev, dest, hop);
+			prev.get(index-1).receiveExplorationAnt(new ArrayList<Station>(prev), dest, -1);
 		} else {
 			prev.add(this);
 			for(Station s : getNeighbours()) {
-				s.receiveExplorationAnt(prev, dest, hop - 1);
+				s.receiveExplorationAnt(new ArrayList<Station>(prev), dest, hop - 1);
 			}
 		}
 	}
@@ -113,15 +121,31 @@ public class Station extends Depot {
 	}
 	
 	private void makeRoadsign(RoadSign previous) {
-		RoadSign sign = new RoadSign();
+		RoadSign sign = null;
 		int hops = previous.getHops();
+		boolean updated = false;
+		
+		for(RoadSign rs : getRoadsigns()) {
+			if(rs.getEndStation() == previous.getEndStation()) {
+				rs.setStrength(1);
+				if(rs.getHops() < hops) {
+					hops = rs.getHops();
+				}
+				updated  = true;
+			}
+		}
+		
+		sign = new RoadSign();
 		sign.setHops(hops - 1);
 		sign.setEndStation(previous.getEndStation());
-		this.roadsigns.add(sign);
 		
+		
+		if(!updated) {
+			this.roadsigns.add(sign);
+		}
+
 		if(hops >= 0) {
 			int  n = rand.nextInt(this.neighbours.size());
-			System.out.println(n);
 			this.neighbours.get(n).receiveRoadSignAnt(sign);
 		}
 	}

@@ -73,57 +73,49 @@ public class PeopleMover {
 		}
 		
 		for(int i = 0;  i < NUM_USERS; i++) {
-			Point pos = roadModel.getRandomPosition(r);
-			User u = new User
-					(Parcel.builder (roadModel.getRandomPosition(r), 
-					pos)
-					.buildDTO(), 0, null);
-			
-			simulator.register(u);
-
-			for(Station s : getStations()) {
-				if(s.getPosition().equals(pos)) {
-					s.getPassengers().add(u);
-					break;
-				}
-			}
+			addRandomUser(roadModel, r, simulator);
 		}
 		
 		for(int i = 0; i < NUM_PODS; i++) {
-			simulator.register(new Pod(roadModel.getRandomPosition(r), MAX_PODCAPACITY, null));
+			Point pos = roadModel.getRandomPosition(r);
+			while(getStationAtPoint(pos).getPod() != null)
+				pos = roadModel.getRandomPosition(r);
+			Station s = getStationAtPoint(pos);
+			Pod p = new Pod(pos, MAX_PODCAPACITY, s);
+			s.setPod(p);
+			simulator.register(p);
+			System.out.println("register at "+pos);
 		}
 		
 		simulator.addTickListener(new TickListener() {
 			@Override
 			public void tick(TimeLapse timeLapse) {
 				if(r.nextDouble() < SPAWN_RATE) {
-					simulator.register(new User
-							(Parcel.builder (roadModel.getRandomPosition(r), 
-							roadModel.getRandomPosition(r))
-							.buildDTO(), 0, null));
+					addRandomUser(roadModel, r, simulator);
 				}
 				
 				for(Station s : getStations()) {
-					System.out.println(s.getRoadsigns().size());
 					// Update strengths
-					ArrayList<RoadSign> toRemove = new ArrayList<>();
+					ArrayList<RoadSign> toRemoveRs = new ArrayList<>();
 					for(RoadSign rs : s.getRoadsigns()) {
 						double str = rs.getStrength();
 						
 						if(str < 0.0001) {
-							toRemove.add(rs);
+							toRemoveRs.add(rs);
 						} else {
 							rs.setStrength(str/2);
 						}
 					}
-					s.getRoadsigns().removeAll(toRemove);
+					s.getRoadsigns().removeAll(toRemoveRs);
 					
 					// Remove expired reservations
+					ArrayList<Reservation> toRemoveRes = new ArrayList<>();
 					for(Reservation r : s.getReservations()) {
 						if(r.getExpirationTime() >= System.currentTimeMillis()) {
-							s.getReservations().remove(r);
+							toRemoveRes.add(r);
 						}
 					}
+					s.getReservations().removeAll(toRemoveRes);
 					
 					// Send out feasability ants
 					if(!s.getPassengers().isEmpty()) {
@@ -171,4 +163,21 @@ public class PeopleMover {
 		return null;
 	}
 	
+	public void addRandomUser(RoadModel roadModel, RandomGenerator r, Simulator simulator) {
+		Point pos = roadModel.getRandomPosition(r);
+		int  n = r.nextInt(getStations().size());
+		User u = new User
+				(Parcel.builder (roadModel.getRandomPosition(r), 
+				pos)
+				.buildDTO(), 0, getStations().get(n));
+		
+		simulator.register(u);
+
+		for(Station s : getStations()) {
+			if(s.getPosition().equals(pos)) {
+				s.getPassengers().add(u);
+				break;
+			}
+		}
+	}
 }

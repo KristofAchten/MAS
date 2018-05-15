@@ -13,9 +13,9 @@ import com.github.rinde.rinsim.geom.Point;
 class Pod extends Vehicle {
 	private static final int START_HOP_COUNT = 10;
 
-	private ArrayList<Reservation> desire;
-	private ArrayList<ArrayList<Station>> intentions;
-	private ArrayList<User> passengers;
+	private ArrayList<Reservation> desire = new ArrayList<>();
+	private ArrayList<ArrayList<Station>> intentions = new ArrayList<>();
+	private ArrayList<User> passengers = new ArrayList<>();
 	private Station current; 
 	
 	
@@ -27,7 +27,6 @@ class Pod extends Vehicle {
 				.startPosition(startPos)
 				.speed(SPEED)
 				.build());
-		setDesire(new ArrayList<Reservation>());
 		setCurrent(current);
 	}
 
@@ -42,16 +41,21 @@ class Pod extends Vehicle {
 			if(!rs.isEmpty()) {
 				Collections.sort(rs);
 				Station dest = rs.get(0).getEndStation();
-				getIntentions().clear();
-				current.receiveExplorationAnt(new ArrayList<Station>(), dest, START_HOP_COUNT);
-				
-				ArrayList<Station> curBest = getIntentions().get(0);
-				for(ArrayList<Station> i : getIntentions()) {
-					if(i.size() < curBest.size()) {
-						curBest = i;
+				if(dest != current) {
+					getIntentions().clear();
+					current.receiveExplorationAnt(new ArrayList<Station>(), dest, START_HOP_COUNT);
+					
+					if(!getIntentions().isEmpty()) {
+						ArrayList<Station> curBest = getIntentions().get(0);
+						for(ArrayList<Station> i : getIntentions()) {
+							if(i.size() < curBest.size()) {
+								curBest = i;
+							}
+						}
+						System.out.println("Making reservation for intention: "+curBest+ "with pod " + this);
+						makeReservations(curBest);
 					}
 				}
-				makeReservations(curBest);
 			} else {
 				// Random buur
 			}
