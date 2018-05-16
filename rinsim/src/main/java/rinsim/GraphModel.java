@@ -1,5 +1,6 @@
 package rinsim;
 
+import com.github.rinde.rinsim.geom.Connection;
 import com.github.rinde.rinsim.geom.ConnectionData;
 import com.github.rinde.rinsim.geom.Graph;
 import com.github.rinde.rinsim.geom.Point;
@@ -64,6 +65,9 @@ public class GraphModel {
 		g.addConnection(p4, p19);
 		g.addConnection(p19, p17);
 		
+		for(Connection<ConnectionData> c : g.getConnections()) {
+			g.addConnection(c.to(), c.from());
+		}
 		return g;
 	}
 }

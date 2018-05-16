@@ -14,6 +14,7 @@ public class Station extends Depot {
 	
 	private static long RESERVATION_TIME = 300000;
 	private static long EXPIRATION_TIME = 300000;
+	private static long BUFFER_TIME = 1000;
 
 	
 	private ArrayList<Reservation> reservations = new ArrayList<>();
@@ -97,7 +98,7 @@ public class Station extends Depot {
 			ret.add(current);
 			current.getPrevStation().sendConfirmation(ret);
 		} else {
-			sendReservationAnt(res, current.getTime().end());	
+			sendReservationAnt(res, current.getTime().begin() + BUFFER_TIME);	
 		}
 	}
 	

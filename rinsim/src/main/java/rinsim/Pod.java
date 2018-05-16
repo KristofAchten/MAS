@@ -2,13 +2,19 @@ package rinsim;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedList;
+import java.util.Queue;
 
 import org.omg.CORBA.Current;
 
+import com.github.rinde.rinsim.core.model.pdp.PDPModel;
+import com.github.rinde.rinsim.core.model.pdp.PDPModel.ParcelState;
 import com.github.rinde.rinsim.core.model.pdp.Vehicle;
 import com.github.rinde.rinsim.core.model.pdp.VehicleDTO;
+import com.github.rinde.rinsim.core.model.road.RoadModel;
 import com.github.rinde.rinsim.core.model.time.TimeLapse;
 import com.github.rinde.rinsim.geom.Point;
+import com.github.rinde.rinsim.util.TimeWindow;
 
 class Pod extends Vehicle {
 	private static final int START_HOP_COUNT = 10;
@@ -17,9 +23,11 @@ class Pod extends Vehicle {
 	private ArrayList<ArrayList<Station>> intentions = new ArrayList<>();
 	private ArrayList<User> passengers = new ArrayList<>();
 	private Station current; 
+	private Queue<Point> movingQueue = new LinkedList<Point>();
+	private TimeWindow currentWindow = null;
 	
 	
-	private static final double SPEED = 1000d;
+	private static final double SPEED = 100d;
 	
 	protected Pod(Point startPos, int cap, Station current) {
 		super(VehicleDTO.builder()
@@ -32,9 +40,16 @@ class Pod extends Vehicle {
 
 	@Override
 	protected void tickImpl(TimeLapse time) {
-		
+		RoadModel rm = getRoadModel();
+		PDPModel pm = getPDPModel();
+			
+		if(!rm.getObjectsAt(this, Station.class).isEmpty())
+			current = rm.getObjectsAt(this, Station.class).iterator().next();
+
 		if(current == null)
 			return;
+		else
+			current.setPod(this);
 		
 		if(getDesire().isEmpty() && current.getPassengers().isEmpty()) {
 			ArrayList<RoadSign> rs = current.getRoadsigns();
@@ -52,7 +67,7 @@ class Pod extends Vehicle {
 								curBest = i;
 							}
 						}
-						System.out.println("Making reservation for intention: "+curBest+ "with pod " + this);
+					
 						makeReservations(curBest);
 					}
 				}
@@ -61,22 +76,46 @@ class Pod extends Vehicle {
 			}
 		}
 		
-		// Remove users that have arrived.
-		for(User u : getPassengers()) {
-			if(u.getDestination() == current) {
-				getPassengers().remove(u);
-			}
+		if(movingQueue.isEmpty() && !getDesire().isEmpty()) {
+			Reservation r = getDesire().remove(0);
+			currentWindow = r.getTime();
+			movingQueue.add(r.getStation().getPosition());
+			current = null;
+			return;
 		}
 		
+		// Remove users that have arrived.
+		ArrayList<User> toRemove = new ArrayList<>();
+		for(User u : getPassengers()) {
+			if(u.getDestination() == current) {
+				toRemove.add(u);
+				System.out.println(current.getPosition()+", "+u.getDestination().getPosition()+", "+rm.getPosition(this));
+				pm.deliver(this, u, time);
+				System.out.println("wouter is here. Run.");
+			}
+		}
+		getPassengers().removeAll(toRemove);
+		
 		// Embark new users
+		ArrayList<User> toEmbark = new ArrayList<>();
 		for(User u : current.getPassengers()) {
 			Station dest = u.getDestination();
 			for(Reservation r : this.desire) {
-				if(dest == r.getStation() && getPassengers().size() < getCapacity()) {
+				if(getPassengers().size() < getCapacity()) {
 					getPassengers().add(u);
-					current.embarkUser(u);
+					toEmbark.add(u);
 				}
 			}
+		}
+		System.out.println(pm.getParcels(ParcelState.AVAILABLE));
+		for(User us : toEmbark) {
+			pm.pickup(this, us, time);
+			current.embarkUser(us);
+		}
+		
+
+		if(!movingQueue.isEmpty() && currentWindow.isIn(System.currentTimeMillis())) {
+			rm.followPath(this, movingQueue, time);
 		}
 	}
 

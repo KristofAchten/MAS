@@ -84,7 +84,6 @@ public class PeopleMover {
 			Pod p = new Pod(pos, MAX_PODCAPACITY, s);
 			s.setPod(p);
 			simulator.register(p);
-			System.out.println("register at "+pos);
 		}
 		
 		simulator.addTickListener(new TickListener() {
@@ -121,7 +120,7 @@ public class PeopleMover {
 					if(!s.getPassengers().isEmpty()) {
 						for(User u : s.getPassengers()) {
 							RoadSign rs = new RoadSign();
-							rs.setEndStation(u.getDestination());
+							rs.setEndStation(s);
 							s.receiveRoadSignAnt(rs);
 						}
 					}
@@ -138,7 +137,7 @@ public class PeopleMover {
 		    View.Builder view = View.builder()
 		      .with(GraphRoadModelRenderer.builder())
 		      .with(RoadUserRenderer.builder()		      
-		    		  .withImageAssociation(User.class, "/littletom.png")
+		    		  .withImageAssociation(User.class, "/littlewouter.png")
 		    		  .withImageAssociation(Pod.class, "/graphics/flat/taxi-32.png")
 		    		  .withImageAssociation(Station.class, "/graphics/flat/bus-stop-icon-32.png")
 		    		  .withImageAssociation(LoadingDock.class, "/graphics/perspective/tall-building-64.png"))
@@ -164,20 +163,20 @@ public class PeopleMover {
 	}
 	
 	public void addRandomUser(RoadModel roadModel, RandomGenerator r, Simulator simulator) {
-		Point pos = roadModel.getRandomPosition(r);
-		int  n = r.nextInt(getStations().size());
-		User u = new User
-				(Parcel.builder (roadModel.getRandomPosition(r), 
-				pos)
-				.buildDTO(), 0, getStations().get(n));
-		
-		simulator.register(u);
+		Point startpos = roadModel.getRandomPosition(r);
+		Point endpos = roadModel.getRandomPosition(r);
+		Station start = getStationAtPoint(startpos);
 
-		for(Station s : getStations()) {
-			if(s.getPosition().equals(pos)) {
-				s.getPassengers().add(u);
-				break;
-			}
-		}
+		while(startpos.equals(endpos))
+			endpos = roadModel.getRandomPosition(r);
+		
+		
+		User u = new User
+				(Parcel.builder (startpos, endpos)
+				.buildDTO(), 0, getStationAtPoint(endpos));
+		
+		start.getPassengers().add(u);
+		System.out.println("added wouter to "+startpos+", he wants to go to "+endpos);
+		simulator.register(u);
 	}
 }
