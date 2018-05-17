@@ -20,7 +20,7 @@ import com.github.rinde.rinsim.util.TimeWindow;
 
 class Pod extends Vehicle {
 	private static final int START_HOP_COUNT = 5;
-	private static final int RESERVATION_DIF = 10000; 
+	private static final int RESERVATION_DIF = 20000; 
 
 	private ArrayList<Reservation> desire = new ArrayList<>();
 	private ArrayList<ArrayList<Station>> intentions = new ArrayList<>();
@@ -110,6 +110,7 @@ class Pod extends Vehicle {
 			if(u.getDestination() == current) {
 				toRemove.add(u);
 				pm.deliver(this, u, time);
+				System.out.println("Ik zie een driekwartsbroek...");
 			}
 		}
 		getPassengers().removeAll(toRemove);
@@ -147,7 +148,7 @@ class Pod extends Vehicle {
 	}
 	
 	public void refreshReservations() {
-		System.out.println(getDesire().size());
+		getDesire().add(0, new Reservation(current, null, currentWindow, 0, this));
 		current.receiveReservationAnt(getDesire(), System.currentTimeMillis());
 	}
 

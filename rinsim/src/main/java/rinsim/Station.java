@@ -9,6 +9,7 @@ import com.github.rinde.rinsim.core.model.pdp.Depot;
 import com.github.rinde.rinsim.geom.Point;
 import com.github.rinde.rinsim.scenario.generator.TimeWindows;
 import com.github.rinde.rinsim.util.TimeWindow;
+import com.sun.jmx.remote.opt.util.GetPropertyAction;
 
 public class Station extends Depot {
 	
@@ -82,21 +83,25 @@ public class Station extends Depot {
 				break;
 			}
 		}
+
+		
+		TimeWindow result = checkPossibleReservationTime(preferredTime);
 		
 		if(existingReservation == null) {
 			this.reservations.add(current);
 		} else {
-			current = existingReservation;
+			current = existingReservation;	
 		}
-		
-		TimeWindow result = checkPossibleReservationTime(preferredTime);
 		current.setTime(result);
 		current.setExpirationTime(System.currentTimeMillis() + EXPIRATION_TIME);
 
 		if(res.isEmpty()) {
 			ArrayList<Reservation> ret = new ArrayList<>();
 			ret.add(current);
-			current.getPrevStation().sendConfirmation(ret);
+			if(current.getPrevStation() != null)
+				current.getPrevStation().sendConfirmation(ret);
+			else
+				current.getStation().getPod().confirmReservations(ret);
 		} else {
 			sendReservationAnt(res, current.getTime().begin() + BUFFER_TIME);	
 		}
@@ -112,12 +117,11 @@ public class Station extends Depot {
 		}
 		res.add(correctReservation);
 		
-		if(correctReservation.getPrevStation() == null) {
+		if(correctReservation.getPod() == getPod()) {
 			assert(this.pod == correctReservation.getPod());
 			this.pod.confirmReservations(res);
 			return;
 		}
-		
 		correctReservation.getPrevStation().sendConfirmation(res);
 	}
 	
