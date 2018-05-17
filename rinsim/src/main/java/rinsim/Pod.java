@@ -1,9 +1,11 @@
 package rinsim;
 
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Random;
 
 import org.omg.CORBA.Current;
 
@@ -25,7 +27,7 @@ class Pod extends Vehicle {
 	private Station current; 
 	private Queue<Point> movingQueue = new LinkedList<Point>();
 	private TimeWindow currentWindow = null;
-	
+	Random r = new Random();
 	
 	private static final double SPEED = 100d;
 	
@@ -42,40 +44,55 @@ class Pod extends Vehicle {
 	protected void tickImpl(TimeLapse time) {
 		RoadModel rm = getRoadModel();
 		PDPModel pm = getPDPModel();
-			
-		if(!rm.getObjectsAt(this, Station.class).isEmpty())
-			current = rm.getObjectsAt(this, Station.class).iterator().next();
-
-		if(current == null)
-			return;
-		else
-			current.setPod(this);
 		
-		if(getDesire().isEmpty() && current.getPassengers().isEmpty()) {
-			ArrayList<RoadSign> rs = current.getRoadsigns();
-			if(!rs.isEmpty()) {
-				Collections.sort(rs);
-				Station dest = rs.get(0).getEndStation();
-				if(dest != current) {
-					getIntentions().clear();
-					current.receiveExplorationAnt(new ArrayList<Station>(), dest, START_HOP_COUNT);
-					
-					if(!getIntentions().isEmpty()) {
-						ArrayList<Station> curBest = getIntentions().get(0);
-						for(ArrayList<Station> i : getIntentions()) {
-							if(i.size() < curBest.size()) {
-								curBest = i;
-							}
-						}
-					
-						makeReservations(curBest);
-					}
+		// Move to the next point.
+		if(!movingQueue.isEmpty() && currentWindow.isIn(System.currentTimeMillis())) {
+			rm.followPath(this, movingQueue, time);
+		}
+		
+		// If at station, set current station
+		if(!rm.getObjectsAt(this, Station.class).isEmpty()) {
+			current = rm.getObjectsAt(this, Station.class).iterator().next();
+			current.setPod(this);
+		} else {
+			return;
+		}
+		
+		// If no desire is active and there are no passengers: send out exploration ends using roadsign info
+		if(getDesire().isEmpty()) {
+			Station dest = null;
+			if(current.getPassengers().isEmpty()) {
+				ArrayList<RoadSign> rs = current.getRoadsigns();
+				if(!rs.isEmpty()) {
+					Collections.sort(rs);
+					dest = rs.get(0).getEndStation();
 				}
+			} else if(!current.getPassengers().isEmpty()) {
+				User u = current.getPassengers().get(0);
+				dest = u.getDestination();
 			} else {
-				// Random buur
+				int n = r.nextInt(current.getNeighbours().size());
+				dest = current.getNeighbours().get(n);
+			}
+				
+			// Fetch the intentions to the destination and make a desire from the shortest one.
+			if(dest != current) {
+				getIntentions().clear();
+				current.receiveExplorationAnt(new ArrayList<Station>(), dest, START_HOP_COUNT);
+				
+				if(!getIntentions().isEmpty()) {
+					ArrayList<Station> curBest = getIntentions().get(0);
+					for(ArrayList<Station> i : getIntentions()) {
+						if(i.size() < curBest.size()) {
+							curBest = i;
+						}
+					}
+					makeReservations(curBest);
+				}
 			}
 		}
 		
+		// If there are no planned moves, and there is a desire, add a move from the desire.
 		if(movingQueue.isEmpty() && !getDesire().isEmpty()) {
 			Reservation r = getDesire().remove(0);
 			currentWindow = r.getTime();
@@ -89,9 +106,7 @@ class Pod extends Vehicle {
 		for(User u : getPassengers()) {
 			if(u.getDestination() == current) {
 				toRemove.add(u);
-				System.out.println(current.getPosition()+", "+u.getDestination().getPosition()+", "+rm.getPosition(this));
 				pm.deliver(this, u, time);
-				System.out.println("wouter is here. Run.");
 			}
 		}
 		getPassengers().removeAll(toRemove);
@@ -101,21 +116,15 @@ class Pod extends Vehicle {
 		for(User u : current.getPassengers()) {
 			Station dest = u.getDestination();
 			for(Reservation r : this.desire) {
-				if(getPassengers().size() < getCapacity()) {
+				if(getPassengers().size() < getCapacity() && r.getStation() == dest) {
 					getPassengers().add(u);
 					toEmbark.add(u);
 				}
 			}
 		}
-		System.out.println(pm.getParcels(ParcelState.AVAILABLE));
 		for(User us : toEmbark) {
 			pm.pickup(this, us, time);
 			current.embarkUser(us);
-		}
-		
-
-		if(!movingQueue.isEmpty() && currentWindow.isIn(System.currentTimeMillis())) {
-			rm.followPath(this, movingQueue, time);
 		}
 	}
 
