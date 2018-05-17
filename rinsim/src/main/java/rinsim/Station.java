@@ -12,8 +12,8 @@ import com.github.rinde.rinsim.util.TimeWindow;
 
 public class Station extends Depot {
 	
-	private static long RESERVATION_TIME = 300000;
-	private static long EXPIRATION_TIME = 300000;
+	private static long RESERVATION_TIME = 20000;
+	private static long EXPIRATION_TIME = 20000;
 	private static long BUFFER_TIME = 1000;
 
 	
@@ -84,13 +84,13 @@ public class Station extends Depot {
 		}
 		
 		if(existingReservation == null) {
-			TimeWindow result = checkPossibleReservationTime(preferredTime);
-			current.setTime(result);
 			this.reservations.add(current);
 		} else {
 			current = existingReservation;
 		}
-
+		
+		TimeWindow result = checkPossibleReservationTime(preferredTime);
+		current.setTime(result);
 		current.setExpirationTime(System.currentTimeMillis() + EXPIRATION_TIME);
 
 		if(res.isEmpty()) {

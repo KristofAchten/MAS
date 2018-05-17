@@ -19,7 +19,8 @@ import com.github.rinde.rinsim.geom.Point;
 import com.github.rinde.rinsim.util.TimeWindow;
 
 class Pod extends Vehicle {
-	private static final int START_HOP_COUNT = 10;
+	private static final int START_HOP_COUNT = 5;
+	private static final int RESERVATION_DIF = 10000; 
 
 	private ArrayList<Reservation> desire = new ArrayList<>();
 	private ArrayList<ArrayList<Station>> intentions = new ArrayList<>();
@@ -45,7 +46,6 @@ class Pod extends Vehicle {
 		RoadModel rm = getRoadModel();
 		PDPModel pm = getPDPModel();
 		
-		// Move to the next point.
 		if(!movingQueue.isEmpty() && currentWindow.isIn(System.currentTimeMillis())) {
 			rm.followPath(this, movingQueue, time);
 		}
@@ -61,7 +61,7 @@ class Pod extends Vehicle {
 		// If no desire is active and there are no passengers: send out exploration ends using roadsign info
 		if(getDesire().isEmpty()) {
 			Station dest = null;
-			if(current.getPassengers().isEmpty()) {
+			if(current.getPassengers().isEmpty() && !current.getRoadsigns().isEmpty()) {
 				ArrayList<RoadSign> rs = current.getRoadsigns();
 				if(!rs.isEmpty()) {
 					Collections.sort(rs);
@@ -94,6 +94,9 @@ class Pod extends Vehicle {
 		
 		// If there are no planned moves, and there is a desire, add a move from the desire.
 		if(movingQueue.isEmpty() && !getDesire().isEmpty()) {
+			if(getDesire().get(0).getTime().end() < System.currentTimeMillis() + RESERVATION_DIF) {
+				refreshReservations();
+			} 
 			Reservation r = getDesire().remove(0);
 			currentWindow = r.getTime();
 			movingQueue.add(r.getStation().getPosition());
@@ -141,6 +144,11 @@ class Pod extends Vehicle {
 	public void confirmReservations(ArrayList<Reservation> res) {
 		Collections.reverse(res);
 		setDesire(res);
+	}
+	
+	public void refreshReservations() {
+		System.out.println(getDesire().size());
+		current.receiveReservationAnt(getDesire(), System.currentTimeMillis());
 	}
 
 	public ArrayList<Reservation> getDesire() {
