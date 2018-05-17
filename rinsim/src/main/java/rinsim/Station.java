@@ -35,8 +35,8 @@ public class Station extends Depot {
 	public void receiveExplorationAnt(ArrayList<Station> prev, Station dest, int hop) {
 		forwardExploration(prev, dest, hop);
 	}
-	public void receiveReservationAnt(ArrayList<Reservation> res, long preferredTime) {
-		makeReservation(res, preferredTime);
+	public void receiveReservationAnt(ArrayList<Reservation> res, long preferredTime, boolean refreshing) {
+		makeReservation(res, preferredTime, refreshing);
 	}
 	public void receiveRoadSignAnt(RoadSign prev) {
 		makeRoadsign(prev);
@@ -68,30 +68,26 @@ public class Station extends Depot {
 		}
 	}
 
-	public void sendReservationAnt(ArrayList<Reservation> res, long preferredTime) {
+	public void sendReservationAnt(ArrayList<Reservation> res, long preferredTime, boolean refreshing) {
 		Station receiver = res.get(0).getStation();
-		receiver.receiveReservationAnt(res, preferredTime);
+		receiver.receiveReservationAnt(res, preferredTime, refreshing);
 	}
 	
-	private void makeReservation(ArrayList<Reservation> res, long preferredTime) {
-		Reservation current = res.remove(0);
-		Reservation existingReservation = null;
+	private void makeReservation(ArrayList<Reservation> res, long preferredTime, boolean refreshing) {
+		Reservation current = res.remove(0);		
 		
-		for(Reservation r : this.reservations) {
-			if(r.getPod() == current.getPod()) {
-				existingReservation = r;
-				break;
+		if(refreshing) {
+			Reservation toRemove = null;
+			for(Reservation r: reservations) {
+				if(r.getPod() == current.getPod())
+					toRemove = r;
+					break;
 			}
+			reservations.remove(toRemove);
 		}
 
-		
 		TimeWindow result = checkPossibleReservationTime(preferredTime);
-		
-		if(existingReservation == null) {
-			this.reservations.add(current);
-		} else {
-			current = existingReservation;	
-		}
+		this.reservations.add(current);
 		current.setTime(result);
 		current.setExpirationTime(System.currentTimeMillis() + EXPIRATION_TIME);
 
@@ -103,7 +99,7 @@ public class Station extends Depot {
 			else
 				current.getStation().getPod().confirmReservations(ret);
 		} else {
-			sendReservationAnt(res, current.getTime().begin() + BUFFER_TIME);	
+			sendReservationAnt(res, current.getTime().begin() + BUFFER_TIME, refreshing);	
 		}
 	}
 	
@@ -117,6 +113,7 @@ public class Station extends Depot {
 		}
 		res.add(correctReservation);
 		
+		System.out.println(this.getPosition() + "," + getRoadModel().getPosition(correctReservation.getPod()) + "," + this.getPod());
 		if(correctReservation.getPod() == getPod()) {
 			assert(this.pod == correctReservation.getPod());
 			this.pod.confirmReservations(res);
@@ -153,6 +150,18 @@ public class Station extends Depot {
 			int  n = rand.nextInt(this.neighbours.size());
 			this.neighbours.get(n).receiveRoadSignAnt(sign);
 		}
+	}
+	
+	public void refreshReservation(ArrayList<Reservation> res, long preferredTime) {
+		Reservation r = res.remove(0);
+		for(Reservation r2 : getReservations()) {
+			if(r.getPod() == r2.getPod()) {
+				r2.setTime(checkPossibleReservationTime(preferredTime));
+				r2.setExpirationTime(System.currentTimeMillis() + EXPIRATION_TIME);
+				break;
+			}
+		}
+		res.get(0).getStation().refreshReservation(res, preferredTime + BUFFER_TIME);
 	}
 	
 	private TimeWindow checkPossibleReservationTime(long time) {

@@ -47,6 +47,7 @@ class Pod extends Vehicle {
 		PDPModel pm = getPDPModel();
 		
 		if(!movingQueue.isEmpty() && currentWindow.isIn(System.currentTimeMillis())) {
+			System.out.println(movingQueue +", "+rm.getPosition(this));
 			rm.followPath(this, movingQueue, time);
 		}
 		
@@ -55,6 +56,9 @@ class Pod extends Vehicle {
 			current = rm.getObjectsAt(this, Station.class).iterator().next();
 			current.setPod(this);
 		} else {
+			if (current != null)
+				current.setPod(null);
+			current = null;
 			return;
 		}
 		
@@ -100,6 +104,7 @@ class Pod extends Vehicle {
 			Reservation r = getDesire().remove(0);
 			currentWindow = r.getTime();
 			movingQueue.add(r.getStation().getPosition());
+			current.setPod(null);
 			current = null;
 			return;
 		}
@@ -139,7 +144,7 @@ class Pod extends Vehicle {
 			res.add(new Reservation(s, prev, null, 0, this));
 			prev = s;
 		}
-		current.receiveReservationAnt(res, System.currentTimeMillis());
+		current.receiveReservationAnt(res, System.currentTimeMillis(), false);
 	}
 
 	public void confirmReservations(ArrayList<Reservation> res) {
@@ -149,7 +154,7 @@ class Pod extends Vehicle {
 	
 	public void refreshReservations() {
 		getDesire().add(0, new Reservation(current, null, currentWindow, 0, this));
-		current.receiveReservationAnt(getDesire(), System.currentTimeMillis());
+		current.receiveReservationAnt(getDesire(), System.currentTimeMillis(), true);
 	}
 
 	public ArrayList<Reservation> getDesire() {
