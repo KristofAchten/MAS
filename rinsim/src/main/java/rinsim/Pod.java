@@ -69,7 +69,7 @@ class Pod extends Vehicle {
 			//System.out.println("here is movingQueue: " + movingQueue);
 			Station dest = null;
 			if(current.getPassengers().isEmpty() && !current.getRoadsigns().isEmpty()) {
-				//System.out.println("jappens 1");
+				System.out.println("jappens 1");
 				ArrayList<RoadSign> rs = current.getRoadsigns();
 				if(!rs.isEmpty()) {
 					Collections.sort(rs);
@@ -108,20 +108,6 @@ class Pod extends Vehicle {
 			}
 		}
 		
-		// If there are no planned moves, and there is a desire, add a move from the desire.
-		if(movingQueue.isEmpty() && !getDesire().isEmpty()) {
-			if(getDesire().get(0).getTime().end() < System.currentTimeMillis() + RESERVATION_DIF) {
-				refreshReservations();
-			} 
-			Reservation r = getDesire().remove(0);
-			//System.out.println("movingqueue: "+r.getStation().getPosition());
-			currentWindow = r.getTime();
-			movingQueue.add(r.getStation().getPosition());
-			current.setPod(null);
-			current = null;
-			return;
-		}
-		
 		// Remove users that have arrived.
 		ArrayList<User> toRemove = new ArrayList<>();
 		for(User u : getPassengers()) {
@@ -145,8 +131,23 @@ class Pod extends Vehicle {
 			}
 		}
 		for(User us : toEmbark) {
+			System.out.println("pick up");
 			pm.pickup(this, us, time);
 			current.embarkUser(us);
+		}
+		
+		// If there are no planned moves, and there is a desire, add a move from the desire.
+		if(movingQueue.isEmpty() && !getDesire().isEmpty()) {
+			if(getDesire().get(0).getTime().end() < System.currentTimeMillis() + RESERVATION_DIF) {
+				refreshReservations();
+			} 
+			Reservation r = getDesire().remove(0);
+			//System.out.println("movingqueue: "+r.getStation().getPosition());
+			currentWindow = r.getTime();
+			movingQueue.add(r.getStation().getPosition());
+			current.setPod(null);
+			current = null;
+			return;
 		}
 	}
 
@@ -167,11 +168,6 @@ class Pod extends Vehicle {
 	
 	public void refreshReservations() {
 		getDesire().add(0, new Reservation(current, null, currentWindow, 0, this));
-		System.out.println("refreshing for desire: ");
-		for(Reservation r: getDesire()) {
-			System.out.println(r.getStation().getPosition());
-		}
-		System.out.println("current station: " + current.getPosition());
 		current.receiveReservationAnt(getDesire(), System.currentTimeMillis(), true);
 	}
 
