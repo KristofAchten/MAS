@@ -7,6 +7,8 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Random;
 
+import javax.measure.unit.SystemOfUnits;
+
 import org.omg.CORBA.Current;
 
 import com.github.rinde.rinsim.core.model.pdp.PDPModel;
@@ -47,7 +49,7 @@ class Pod extends Vehicle {
 		PDPModel pm = getPDPModel();
 		
 		if(!movingQueue.isEmpty() && currentWindow.isIn(System.currentTimeMillis())) {
-			System.out.println(movingQueue +", "+rm.getPosition(this));
+			//System.out.println(movingQueue +", "+rm.getPosition(this));
 			rm.followPath(this, movingQueue, time);
 		}
 		
@@ -63,22 +65,28 @@ class Pod extends Vehicle {
 		}
 		
 		// If no desire is active and there are no passengers: send out exploration ends using roadsign info
-		if(getDesire().isEmpty()) {
+		if(getDesire().isEmpty() && movingQueue.isEmpty()) {
+			//System.out.println("here is movingQueue: " + movingQueue);
 			Station dest = null;
 			if(current.getPassengers().isEmpty() && !current.getRoadsigns().isEmpty()) {
+				//System.out.println("jappens 1");
 				ArrayList<RoadSign> rs = current.getRoadsigns();
 				if(!rs.isEmpty()) {
 					Collections.sort(rs);
 					dest = rs.get(0).getEndStation();
 				}
 			} else if(!current.getPassengers().isEmpty()) {
+				System.out.println("jappens 2");
 				User u = current.getPassengers().get(0);
 				dest = u.getDestination();
 			} else {
+				System.out.println("jappens 3");
 				int n = r.nextInt(current.getNeighbours().size());
 				dest = current.getNeighbours().get(n);
 			}
-				
+			
+			//System.out.println("destination: " + dest.getPosition());
+			//System.out.println("pod position: " + rm.getPosition(this));
 			// Fetch the intentions to the destination and make a desire from the shortest one.
 			if(dest != current) {
 				getIntentions().clear();
@@ -91,6 +99,10 @@ class Pod extends Vehicle {
 							curBest = i;
 						}
 					}
+					//System.out.println("intention");
+					for(Station s: curBest) {
+						//System.out.println(s.getPosition()+ ", ");
+					}
 					makeReservations(curBest);
 				}
 			}
@@ -102,6 +114,7 @@ class Pod extends Vehicle {
 				refreshReservations();
 			} 
 			Reservation r = getDesire().remove(0);
+			//System.out.println("movingqueue: "+r.getStation().getPosition());
 			currentWindow = r.getTime();
 			movingQueue.add(r.getStation().getPosition());
 			current.setPod(null);
@@ -154,6 +167,11 @@ class Pod extends Vehicle {
 	
 	public void refreshReservations() {
 		getDesire().add(0, new Reservation(current, null, currentWindow, 0, this));
+		System.out.println("refreshing for desire: ");
+		for(Reservation r: getDesire()) {
+			System.out.println(r.getStation().getPosition());
+		}
+		System.out.println("current station: " + current.getPosition());
 		current.receiveReservationAnt(getDesire(), System.currentTimeMillis(), true);
 	}
 

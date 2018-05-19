@@ -113,7 +113,7 @@ public class Station extends Depot {
 		}
 		res.add(correctReservation);
 		
-		System.out.println(this.getPosition() + "," + getRoadModel().getPosition(correctReservation.getPod()) + "," + this.getPod());
+		//System.out.println(this.getPosition() + "," + getRoadModel().getPosition(correctReservation.getPod()) + "," + this.getPod());
 		if(correctReservation.getPod() == getPod()) {
 			assert(this.pod == correctReservation.getPod());
 			this.pod.confirmReservations(res);
