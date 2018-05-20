@@ -3,7 +3,6 @@ package rinsim;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Random;
 
 import org.apache.commons.math3.random.RandomGenerator;
 
@@ -23,14 +22,21 @@ import com.github.rinde.rinsim.ui.renderers.RoadUserRenderer;
 
 public class PeopleMover {
 	
+	// Are we currently debugging? -> will enable informative printouts.
+	public static final boolean DEBUGGING = false;
+	// The number of pods in the simulation.
 	private static final int NUM_PODS = 5;
+	// The number of loading docks in the road model.
 	private static final int NUM_LOADINGDOCKS = 3;
+	// The number of users at the start of the simulation.
 	private static final int NUM_USERS = 2;
+	// The number of seats per pod.
 	private static final int MAX_PODCAPACITY = 4;
+	// The number of charging spaces per charging dock.
 	private static final int MAX_CHARGECAPACITY = 1; 
+	// The probability of a new user spawning.
 	private static final double SPAWN_RATE = 0.01;
 	
-	private Random r = new Random();
 	private ArrayList<Station> stations = new ArrayList<>();
 	
 	public static void main(String[] args) throws URISyntaxException, IOException {
@@ -42,6 +48,7 @@ public class PeopleMover {
 	
 	private void run() throws URISyntaxException, IOException {
 	
+		// Create the graph.
 		GraphModel gm = new GraphModel();
 		Builder view = createGui();
 
@@ -54,17 +61,20 @@ public class PeopleMover {
 		final RandomGenerator r = simulator.getRandomGenerator();
 		final RoadModel roadModel = simulator.getModelProvider().getModel(RoadModel.class);
 		
+		// Create a station on every vertex of the graph.
 		for(Point p : gm.getGraph().getNodes()) {
 			Station s = new Station(p);
 			addStation(s);
 			simulator.register(s);
 		}
 		
+		// Create a set amount of loading docks at random positions. TODO: check that these are not identical?
 		for(int i = 0; i < NUM_LOADINGDOCKS; i++) {
 			simulator.register(new LoadingDock(roadModel.getRandomPosition(r), MAX_CHARGECAPACITY));
 		}
 		
-		for(Connection c : gm.getGraph().getConnections()) {
+		// Set the neighbours for each station.
+		for(Connection<?> c : gm.getGraph().getConnections()) {
 			Station s1 = getStationAtPoint(c.from());
 			Station s2 = getStationAtPoint(c.to());
 			
@@ -72,10 +82,12 @@ public class PeopleMover {
 			s2.getNeighbours().add(s1);
 		}
 		
+		// Spawn in the original number of users.
 		for(int i = 0;  i < NUM_USERS; i++) {
 			addRandomUser(roadModel, r, simulator);
 		}
 		
+		// Spawn in the predefined number of pods at random, but different, locations.
 		for(int i = 0; i < NUM_PODS; i++) {
 			Point pos = roadModel.getRandomPosition(r);
 			while(getStationAtPoint(pos).getPod() != null)
@@ -86,15 +98,20 @@ public class PeopleMover {
 			simulator.register(p);
 		}
 		
+		// Handle ticks
 		simulator.addTickListener(new TickListener() {
 			@Override
 			public void tick(TimeLapse timeLapse) {
+				
+				// Spawn a new user (sometimes).
 				if(r.nextDouble() < SPAWN_RATE) {
 					addRandomUser(roadModel, r, simulator);
 				}
 				
+				// Per station:
 				for(Station s : getStations()) {
-					// Update strengths
+					
+					// Update strengths and remove expired roadsigns.
 					ArrayList<RoadSign> toRemoveRs = new ArrayList<>();
 					for(RoadSign rs : s.getRoadsigns()) {
 						double str = rs.getStrength();
@@ -116,9 +133,9 @@ public class PeopleMover {
 					}
 					s.getReservations().removeAll(toRemoveRes);
 					
-					// Send out feasability ants
+					// For each user currently at a station: send out feasability ants pointing towards the current station.
 					if(!s.getPassengers().isEmpty()) {
-						for(User u : s.getPassengers()) {
+						for(int i = 0; i < s.getPassengers().size(); i++) {
 							RoadSign rs = new RoadSign();
 							rs.setEndStation(s);
 							s.receiveRoadSignAnt(rs);
@@ -133,7 +150,12 @@ public class PeopleMover {
 		simulator.start();
 	}
 
-	  static View.Builder createGui() {
+	/**
+	 * Create a GUI for ease of mind.
+	 * 
+	 * @return The builder-instance used to create the GUI.
+	 */
+	 public static View.Builder createGui() {
 		    View.Builder view = View.builder()
 		      .with(GraphRoadModelRenderer.builder())
 		      .with(RoadUserRenderer.builder()		      
@@ -153,6 +175,12 @@ public class PeopleMover {
 		this.stations.add(station);
 	}
 	
+	/**
+	 * Returns the station at a given point in the graph.
+	 * 
+	 * @param p - The point
+	 * @return Station at position p
+	 */
 	public Station getStationAtPoint(Point p) {
 		for(Station s : getStations()) {
 			if(s.getPosition().equals(p)) {
@@ -162,21 +190,32 @@ public class PeopleMover {
 		return null;
 	}
 	
+	/**
+	 * Add a user at a random position in the roadmodel. Update all necessary elements.
+	 * 
+	 * @param roadModel - The roadModel to add the user in
+	 * @param r - The random generator used by the roadModel
+	 * @param simulator - The specific simulation instance
+	 */
 	public void addRandomUser(RoadModel roadModel, RandomGenerator r, Simulator simulator) {
 		Point startpos = roadModel.getRandomPosition(r);
 		Point endpos = roadModel.getRandomPosition(r);
 		Station start = getStationAtPoint(startpos);
 
+		// Find a random endposition that is different from the starting position.
 		while(startpos.equals(endpos))
 			endpos = roadModel.getRandomPosition(r);
-		
 		
 		User u = new User
 				(Parcel.builder (startpos, endpos)
 				.buildDTO(), 0, getStationAtPoint(endpos));
 		
+		// Add the new user to the station it spawned in.
 		start.getPassengers().add(u);
-		System.out.println("added wouter to "+startpos+", he wants to go to "+endpos);
+		
+		if(DEBUGGING)
+			System.out.println("Added a user to station "+start+" at position "+startpos+". His destination is the station at position "+endpos);
+		
 		simulator.register(u);
 	}
 }

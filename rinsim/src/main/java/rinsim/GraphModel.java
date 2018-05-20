@@ -65,6 +65,7 @@ public class GraphModel {
 		g.addConnection(p4, p19);
 		g.addConnection(p19, p17);
 		
+		// Make the roads bidirectional
 		for(Connection<ConnectionData> c : g.getConnections()) {
 			g.addConnection(c.to(), c.from());
 		}
