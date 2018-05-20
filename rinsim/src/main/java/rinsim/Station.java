@@ -1,20 +1,19 @@
 package rinsim;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Random;
 
 import com.github.rinde.rinsim.core.model.pdp.Depot;
 import com.github.rinde.rinsim.geom.Point;
-import com.github.rinde.rinsim.scenario.generator.TimeWindows;
 import com.github.rinde.rinsim.util.TimeWindow;
-import com.sun.jmx.remote.opt.util.GetPropertyAction;
 
 public class Station extends Depot {
 	
+	// The time that each reservation should last.
 	private static long RESERVATION_TIME = 20000;
+	// The time after which a reservation will expire.
 	private static long EXPIRATION_TIME = 20000;
+	// The time between each reservation in the sequence.
 	private static long BUFFER_TIME = 1000;
 
 	
@@ -32,6 +31,7 @@ public class Station extends Depot {
 		setCapacity(1);
 	}
 	
+	// Process all incoming ants.
 	public void receiveExplorationAnt(ArrayList<Station> prev, Station dest, int hop) {
 		forwardExploration(prev, dest, hop);
 	}
@@ -42,24 +42,37 @@ public class Station extends Depot {
 		makeRoadsign(prev);
 	}
 	
-	
-	
+	/**
+	 * Adds itself to the list of visited stations and forwards to each neighbour until it reaches
+	 * the destination. Then it will start sending back the information by going through the chain of stations again.
+	 * If the ant doesn't arrive at the correct destination or the hops run out: the chain is cancelled, and nothing is returned.
+	 * 
+	 * @param prev - The list of previously visited stations
+	 * @param dest - The destination Station
+	 * @param hop - The current hop-count. -1 indicates that the returning process is ongoing.
+	 */
 	private void forwardExploration(ArrayList<Station> prev, Station dest, int hop) {
 		
+		// If the hops have run out or loop has been detected (station is already in prev): kill the chain.
 		if((hop == 0 && this != dest) || (prev.contains(this) && hop != -1))
 			return;
 		
+		// If the ant has arrived, add this station to the list and continue the method.
 		if(this == dest) {
 			prev.add(this);
 		}
 
+		// If the ant has arrived or the hop count is set to -1: start returning.
 		if(this == dest || hop == -1) {
 			int index = prev.indexOf(this);
+			// If the index of this station is 0, we've reached the end of the chain and we should inform the current pod.
 			if(index == 0) {
 				getPod().receiveExplorationResult(prev);
 				return;
 			}
+			// If not: send to the next previous station, but use a copy.
 			prev.get(index-1).receiveExplorationAnt(new ArrayList<Station>(prev), dest, -1);
+		// Else: Add this station and forward to each neighbour a copy of the current list (to avoid double modifications).	
 		} else {
 			prev.add(this);
 			for(Station s : getNeighbours()) {
@@ -68,14 +81,29 @@ public class Station extends Depot {
 		}
 	}
 
+	/**
+	 * Forward a reservation ant to the next station in the sequence.
+	 * 
+	 * @param res - The list of (incomplete) reservations
+	 * @param preferredTime - The preferred time a next reservation should be made.
+	 * @param refreshing - Indicates whether or not a new reservation is being made, or a current one is being refreshed
+	 */
 	public void sendReservationAnt(ArrayList<Reservation> res, long preferredTime, boolean refreshing) {
 		Station receiver = res.get(0).getStation();
 		receiver.receiveReservationAnt(res, preferredTime, refreshing);
 	}
 	
+	/**
+	 * Make a reservation, or refresh an existing reservation.
+	 * 
+	 * @param res - A list reservations that already exist. This list is used to iterate through all reservations
+	 * @param preferredTime - The preferred time a reservation should be made
+	 * @param refreshing - Indicates whether or not a new reservation is being made, or a current one is being refreshed
+	 */
 	private void makeReservation(ArrayList<Reservation> res, long preferredTime, boolean refreshing) {
 		Reservation current = res.remove(0);		
 		
+		// When refreshing: find the current reservation and remove it.
 		if(refreshing) {
 			Reservation toRemove = null;
 			for(Reservation r: reservations) {
@@ -86,47 +114,66 @@ public class Station extends Depot {
 			reservations.remove(toRemove);
 		}
 
+		// Find a suitable timewindow, add the current reservation to the station reservations and update using that timewindow.
 		TimeWindow result = checkPossibleReservationTime(preferredTime);
-		this.reservations.add(current);
+		getReservations().add(current);
 		current.setTime(result);
 		current.setExpirationTime(System.currentTimeMillis() + EXPIRATION_TIME);
 
+		// If we've reached the end in the reservationlist (= this station is the intended destination): Start rebuilding a list
+		// of actual reservations for the pod to know about. Inform the pod at the end (when no previous station is available).
 		if(res.isEmpty()) {
 			ArrayList<Reservation> ret = new ArrayList<>();
 			ret.add(current);
+			// If there is a previous station, forward the sequence
 			if(current.getPrevStation() != null)
 				current.getPrevStation().sendConfirmation(ret);
+			// If not: the list only contains one station: it's current position. TODO - is dit nodig? Not sure of dit ooit het geval is.
 			else
 				current.getStation().getPod().confirmReservations(ret);
+		// Forward this ant.	
 		} else {
 			sendReservationAnt(res, current.getTime().begin() + BUFFER_TIME, refreshing);	
 		}
 	}
 	
+	/**
+	 * Rebuild the list of reservations to be sent back to the pod.
+	 * 
+	 * @param res - The list of reservations to be completed
+	 */
 	public void sendConfirmation(ArrayList<Reservation> res) {
+		// Get the pod this reservation sequence is inteded for and find the reservation for it in this station.
 		Pod p = res.get(0).getPod();
 		Reservation correctReservation = null;
-		for(Reservation r : this.reservations) {
+		for(Reservation r : getReservations()) {
 			if (r.getPod() == p) {
 				correctReservation = r;
 			}
 		}
 		res.add(correctReservation);
 		
-		//System.out.println(this.getPosition() + "," + getRoadModel().getPosition(correctReservation.getPod()) + "," + this.getPod());
+		// If we have arrived: forward the reservations on to the pod and terminate.
 		if(correctReservation.getPod() == getPod()) {
-			assert(this.pod == correctReservation.getPod());
-			this.pod.confirmReservations(res);
+			getPod().confirmReservations(res);
 			return;
 		}
+		
+		// Forward the list on the previous station in the sequence.
 		correctReservation.getPrevStation().sendConfirmation(res);
 	}
 	
+	/**
+	 * Create a RoadSign using a feasability ant.
+	 * 
+	 * @param previous - The RoadSign issued by the previous station.
+	 */
 	private void makeRoadsign(RoadSign previous) {
 		RoadSign sign = null;
 		int hops = previous.getHops();
 		boolean updated = false;
 		
+		// If a roadsign already exists with the same endStation: reset it's strength. 
 		for(RoadSign rs : getRoadsigns()) {
 			if(rs.getEndStation() == previous.getEndStation()) {
 				rs.setStrength(1);
@@ -137,23 +184,32 @@ public class Station extends Depot {
 			}
 		}
 		
+		// Set the details
 		sign = new RoadSign();
 		sign.setHops(hops - 1);
 		sign.setEndStation(previous.getEndStation());
 		
-		
+		// If none was updated, add it to the current list of RoadSigns for this station.
 		if(!updated) {
-			this.roadsigns.add(sign);
+			getRoadsigns().add(sign);
 		}
 
-		if(hops >= 0) {
-			int  n = rand.nextInt(this.neighbours.size());
-			this.neighbours.get(n).receiveRoadSignAnt(sign);
+		// If there are any hops left: forward.
+		if(hops > 0) {
+			int  n = rand.nextInt(getNeighbours().size());
+			getNeighbours().get(n).receiveRoadSignAnt(sign);
 		}
 	}
 	
+	/**
+	 * Refresh an already existing reservation in the current station.
+	 * 
+	 * @param res - A list of all reservations to be refreshed, not all for this station
+	 * @param preferredTime - The preferred time of the new reservation
+	 */
 	public void refreshReservation(ArrayList<Reservation> res, long preferredTime) {
 		Reservation r = res.remove(0);
+		// Find the reservation and update it.
 		for(Reservation r2 : getReservations()) {
 			if(r.getPod() == r2.getPod()) {
 				r2.setTime(checkPossibleReservationTime(preferredTime));
@@ -164,6 +220,12 @@ public class Station extends Depot {
 		res.get(0).getStation().refreshReservation(res, preferredTime + BUFFER_TIME);
 	}
 	
+	/**
+	 * Retrieve a timewindow that is usable for a new reservation.
+	 * 
+	 * @param time - The time at which a pod wishes to visit.
+	 * @return TimeWindow - The timewindow that can be reserved.
+	 */
 	private TimeWindow checkPossibleReservationTime(long time) {
 		TimeWindow ret = TimeWindow.create(time, time + RESERVATION_TIME);
 		for(Reservation res : this.reservations)
@@ -174,6 +236,10 @@ public class Station extends Depot {
 		return ret;		
 	}
 
+	/**
+	 * GETTERS AND SETTERS.
+	 */
+	
 	public void embarkUser(User u) {
 		this.passengers.remove(u);
 	}

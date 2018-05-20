@@ -1,16 +1,12 @@
 package rinsim;
 
 public class RoadSign implements Comparable<RoadSign>{
-	private Station endStation;
-	private double strength;
-	private int hops;
+	private Station endStation = null;
+	private double strength = 1.0d;
+	private int hops = 5;
 	
 
-	public RoadSign() {
-		setStrength(1.0);
-		setHops(5);
-		setEndStation(null);
-	}
+	public RoadSign() {}
 
 	public double getStrength() {
 		return strength;
