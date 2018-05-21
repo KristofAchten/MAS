@@ -10,11 +10,11 @@ import com.github.rinde.rinsim.util.TimeWindow;
 public class Station extends Depot {
 	
 	// The time that each reservation should last.
-	private static long RESERVATION_TIME = 20000;
+	public static long RESERVATION_TIME = 20000;
 	// The time after which a reservation will expire.
-	private static long EXPIRATION_TIME = 20000;
+	public static long EXPIRATION_TIME = 10000;
 	// The time between each reservation in the sequence.
-	private static long BUFFER_TIME = 1000;
+	public static long BUFFER_TIME = 1000;
 
 	
 	private ArrayList<Reservation> reservations = new ArrayList<>();
@@ -119,7 +119,10 @@ public class Station extends Depot {
 		getReservations().add(current);
 		current.setTime(result);
 		current.setExpirationTime(System.currentTimeMillis() + EXPIRATION_TIME);
-
+		if(PeopleMover.DEBUGGING)
+			System.out.println("Made a reservation for pod " + current.getPod() + " with timewindow " + result + ".\n"
+					+ "Number of reservations for this station " + this +": "+ this.getReservations().size());
+		
 		// If we've reached the end in the reservationlist (= this station is the intended destination): Start rebuilding a list
 		// of actual reservations for the pod to know about. Inform the pod at the end (when no previous station is available).
 		if(res.isEmpty()) {
@@ -129,8 +132,11 @@ public class Station extends Depot {
 			if(current.getPrevStation() != null)
 				current.getPrevStation().sendConfirmation(ret);
 			// If not: the list only contains one station: it's current position. TODO - is dit nodig? Not sure of dit ooit het geval is.
-			else
+			else {
 				current.getStation().getPod().confirmReservations(ret);
+				if(PeopleMover.DEBUGGING)
+					System.err.println("Exploring else-branch. Shouldn't happen?");
+			}
 		// Forward this ant.	
 		} else {
 			sendReservationAnt(res, current.getTime().begin() + BUFFER_TIME, refreshing);	
@@ -226,13 +232,19 @@ public class Station extends Depot {
 	 * @param time - The time at which a pod wishes to visit.
 	 * @return TimeWindow - The timewindow that can be reserved.
 	 */
-	private TimeWindow checkPossibleReservationTime(long time) {
+	public TimeWindow checkPossibleReservationTime(long time) {
 		TimeWindow ret = TimeWindow.create(time, time + RESERVATION_TIME);
 		for(Reservation res : this.reservations)
 			if(res.getTime().isIn(time) || res.getTime().isIn(time + RESERVATION_TIME)) {
 				time = res.getTime().end();
 				ret = checkPossibleReservationTime(time);
 			}
+		if(PeopleMover.DEBUGGING) {
+			System.out.println("Returned timewindow: " + ret + ". Sequence of windows for other reservations: ");
+			for(Reservation r : getReservations())
+				System.out.print(r.getTime() + ", ");
+			System.out.println();
+		}
 		return ret;		
 	}
 

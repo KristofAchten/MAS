@@ -155,12 +155,13 @@ class Pod extends Vehicle {
 			if(getDesire().get(0).getTime().end() < System.currentTimeMillis() + RESERVATION_DIF) {
 				refreshReservations();
 			} 
-			
+
 			// Pop the highest point in the sequence.
 			Reservation r = getDesire().remove(0);
 			
 			if(PeopleMover.DEBUGGING)
-				System.out.println("Added "+r.getStation().getPosition() + " to the movingQueue of Pod " + this);
+				System.out.println("Added "+r.getStation().getPosition() + " to the movingQueue of Pod " + this +" at " + rm.getPosition(this) + " " + current
+						+ " during tick: " + time);
 			
 			// Set the current fields
 			currentWindow = r.getTime();
@@ -168,12 +169,20 @@ class Pod extends Vehicle {
 		}
 	}
 
+	public TimeWindow getCurrentWindow() {
+		return currentWindow;
+	}
+
+	public void setCurrentWindow(TimeWindow currentWindow) {
+		this.currentWindow = currentWindow;
+	}
+
 	/**
 	 * Make reservations for the stations that the exploration ants return.
 	 * 
 	 * @param curBest - The exploration result
 	 */
-	private void makeReservations(ArrayList<Station> curBest) {
+	public void makeReservations(ArrayList<Station> curBest) {
 		ArrayList<Reservation> res = new ArrayList<Reservation>();
 		Station prev = null;
 		

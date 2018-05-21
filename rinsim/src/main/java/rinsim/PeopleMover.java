@@ -127,7 +127,7 @@ public class PeopleMover {
 					// Remove expired reservations
 					ArrayList<Reservation> toRemoveRes = new ArrayList<>();
 					for(Reservation r : s.getReservations()) {
-						if(r.getExpirationTime() >= System.currentTimeMillis()) {
+						if(r.getExpirationTime() < System.currentTimeMillis()) {
 							toRemoveRes.add(r);
 						}
 					}
