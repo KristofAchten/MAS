@@ -1,7 +1,8 @@
 - Check TODOs
 - Maybe add max number of users
-- Send only one feasability ant ipv #pas per station? Toch elke tick dus zolang er passagiers zijn -> geen probleem.
 - When exploring the first passenger in a row: maybe pick the most optimal one? (= the route where the biggest subset of passengers at that station gets delivered)
-- EXPIRATION_TIME wordt bij System.currentTimeMillis opgeteld -> kan voor een reservatie effectief begint expiren?
-- Station lijn 78: Volgens mij moet dit niet noodzakelijk een copy zijn. Maar mss niet belangrijk...
 - Er worden meerdere moves tegelijk toegevoegd aan een pod's movingqueue? :o
+
+
+21/5: Reservations fixen + optimale passagierskeuze
+22/5: Loadingdocks
