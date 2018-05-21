@@ -30,6 +30,7 @@ public class GraphModel {
 		Point p17 = new Point(11, 18);
 		Point p18 = new Point(8, 5);
 		Point p19 = new Point(4, 15);
+		Point p20 = new Point(6, 14);
 		
 		
 		Graph<ConnectionData> g = new TableGraph<>();
@@ -43,7 +44,6 @@ public class GraphModel {
 		g.addConnection(p3, p18);
 		g.addConnection(p3, p8);
 		g.addConnection(p4, p9);
-		g.addConnection(p4, p17);
 		g.addConnection(p5, p9);
 		g.addConnection(p6, p9);
 		g.addConnection(p6, p7);
@@ -64,6 +64,8 @@ public class GraphModel {
 		g.addConnection(p16, p17);
 		g.addConnection(p4, p19);
 		g.addConnection(p19, p17);
+		g.addConnection(p20, p4);
+		g.addConnection(p20, p17);
 		
 		// Make the roads bidirectional
 		for(Connection<ConnectionData> c : g.getConnections()) {

@@ -1,7 +1,11 @@
 package rinsim;
 
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Random;
+
+import javax.measure.unit.SystemOfUnits;
 
 import com.github.rinde.rinsim.core.model.pdp.Depot;
 import com.github.rinde.rinsim.geom.Point;
@@ -10,9 +14,9 @@ import com.github.rinde.rinsim.util.TimeWindow;
 public class Station extends Depot {
 	
 	// The time that each reservation should last.
-	public static long RESERVATION_TIME = 20000;
+	public static long RESERVATION_TIME = 5000;
 	// The time after which a reservation will expire.
-	public static long EXPIRATION_TIME = 10000;
+	public static long EXPIRATION_TIME = 500000000;
 	// The time between each reservation in the sequence.
 	public static long BUFFER_TIME = 1000;
 
@@ -32,11 +36,11 @@ public class Station extends Depot {
 	}
 	
 	// Process all incoming ants.
-	public void receiveExplorationAnt(ArrayList<Station> prev, Station dest, int hop) {
+	public void receiveExplorationAnt(LinkedHashMap<Station,Long> prev, Station dest, int hop) {
 		forwardExploration(prev, dest, hop);
 	}
-	public void receiveReservationAnt(ArrayList<Reservation> res, long preferredTime, boolean refreshing) {
-		makeReservation(res, preferredTime, refreshing);
+	public void receiveReservationAnt(ArrayList<Reservation> res, boolean refreshing) {
+		makeReservation(res, refreshing);
 	}
 	public void receiveRoadSignAnt(RoadSign prev) {
 		makeRoadsign(prev);
@@ -51,32 +55,45 @@ public class Station extends Depot {
 	 * @param dest - The destination Station
 	 * @param hop - The current hop-count. -1 indicates that the returning process is ongoing.
 	 */
-	private void forwardExploration(ArrayList<Station> prev, Station dest, int hop) {
+	private void forwardExploration(LinkedHashMap<Station,Long> prev, Station dest, int hop) {
 		
 		// If the hops have run out or loop has been detected (station is already in prev): kill the chain.
-		if((hop == 0 && this != dest) || (prev.contains(this) && hop != -1))
+		if((hop == 0 && this != dest) || (prev.keySet().contains(this) && hop != -1))
 			return;
 		
+		long prevTime = System.currentTimeMillis();
+		Iterator<Long> iterator = prev.values().iterator();
+		while (iterator.hasNext()) { 
+			prevTime = iterator.next(); 
+		}
+
 		// If the ant has arrived, add this station to the list and continue the method.
 		if(this == dest) {
-			prev.add(this);
+			prev.put(this, checkPossibleReservationTime(prevTime + RESERVATION_TIME).begin());
 		}
 
 		// If the ant has arrived or the hop count is set to -1: start returning.
 		if(this == dest || hop == -1) {
-			int index = prev.indexOf(this);
 			// If the index of this station is 0, we've reached the end of the chain and we should inform the current pod.
-			if(index == 0) {
+			if(this.equals(prev.keySet().iterator().next())) {
 				getPod().receiveExplorationResult(prev);
 				return;
 			}
 			// If not: send to the next previous station, but use a copy.
-			prev.get(index-1).receiveExplorationAnt(new ArrayList<Station>(prev), dest, -1);
+			Station prevStation = null;
+			Iterator<Station> it = prev.keySet().iterator();
+			Station curStation = it.next();
+
+			while(curStation != this) {
+				prevStation = curStation;
+				curStation = it.next();
+			}
+			prevStation.receiveExplorationAnt(new LinkedHashMap<Station, Long>(prev), dest, -1);
 		// Else: Add this station and forward to each neighbour a copy of the current list (to avoid double modifications).	
 		} else {
-			prev.add(this);
+			prev.put(this, checkPossibleReservationTime(prevTime + RESERVATION_TIME).begin());
 			for(Station s : getNeighbours()) {
-				s.receiveExplorationAnt(new ArrayList<Station>(prev), dest, hop - 1);
+				s.receiveExplorationAnt(new LinkedHashMap<Station, Long>(prev), dest, hop - 1);
 			}
 		}
 	}
@@ -90,7 +107,7 @@ public class Station extends Depot {
 	 */
 	public void sendReservationAnt(ArrayList<Reservation> res, long preferredTime, boolean refreshing) {
 		Station receiver = res.get(0).getStation();
-		receiver.receiveReservationAnt(res, preferredTime, refreshing);
+		receiver.receiveReservationAnt(res, refreshing);
 	}
 	
 	/**
@@ -100,7 +117,7 @@ public class Station extends Depot {
 	 * @param preferredTime - The preferred time a reservation should be made
 	 * @param refreshing - Indicates whether or not a new reservation is being made, or a current one is being refreshed
 	 */
-	private void makeReservation(ArrayList<Reservation> res, long preferredTime, boolean refreshing) {
+	private void makeReservation(ArrayList<Reservation> res, boolean refreshing) {
 		Reservation current = res.remove(0);		
 		
 		// When refreshing: find the current reservation and remove it.
@@ -115,12 +132,12 @@ public class Station extends Depot {
 		}
 
 		// Find a suitable timewindow, add the current reservation to the station reservations and update using that timewindow.
-		TimeWindow result = checkPossibleReservationTime(preferredTime);
+		//TimeWindow result = checkPossibleReservationTime(preferredTime);
 		getReservations().add(current);
-		current.setTime(result);
+		//current.setTime(result);
 		current.setExpirationTime(System.currentTimeMillis() + EXPIRATION_TIME);
 		if(PeopleMover.DEBUGGING)
-			System.out.println("Made a reservation for pod " + current.getPod() + " with timewindow " + result + ".\n"
+			System.out.println("Made a reservation for pod " + current.getPod() + " with timewindow " + current.getTime() + ".\n"
 					+ "Number of reservations for this station " + this +": "+ this.getReservations().size());
 		
 		// If we've reached the end in the reservationlist (= this station is the intended destination): Start rebuilding a list
@@ -233,7 +250,15 @@ public class Station extends Depot {
 	 * @return TimeWindow - The timewindow that can be reserved.
 	 */
 	public TimeWindow checkPossibleReservationTime(long time) {
-		TimeWindow ret = TimeWindow.create(time, time + RESERVATION_TIME);
+		if(getReservations().isEmpty())
+			return TimeWindow.create(time, time+RESERVATION_TIME);
+		Reservation lastRes = getReservations().get(getReservations().size()-1);
+		if(time > lastRes.getTime().end())
+			return TimeWindow.create(time, time+RESERVATION_TIME);
+		else 
+			return TimeWindow.create(lastRes.getTime().end(), lastRes.getTime().end()+RESERVATION_TIME);
+		
+		/**TimeWindow ret = TimeWindow.create(time, time + RESERVATION_TIME);
 		for(Reservation res : this.reservations)
 			if(res.getTime().isIn(time) || res.getTime().isIn(time + RESERVATION_TIME)) {
 				time = res.getTime().end();
@@ -245,7 +270,7 @@ public class Station extends Depot {
 				System.out.print(r.getTime() + ", ");
 			System.out.println();
 		}
-		return ret;		
+		return ret;**/		
 	}
 
 	/**

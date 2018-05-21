@@ -2,7 +2,9 @@ package rinsim;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Random;
 
@@ -19,12 +21,14 @@ class Pod extends Vehicle {
 	// Number of hops the exploration ants are maximally going to take before being returned. 
 	private static final int START_HOP_COUNT = 5;
 	// The maximal time left of a reservation before it is refreshed. 
-	private static final int RESERVATION_DIF = 20000; 
+	private static final int RESERVATION_DIF = 500;
+	// The reservation time at and end station.
+	private static final int END_STATION_TIME = 20000;
 	// The pod speed.
-	private static final double SPEED = 100d;
+	private static final double SPEED = 200d;
 
 	private ArrayList<Reservation> desire = new ArrayList<>();
-	private ArrayList<ArrayList<Station>> intentions = new ArrayList<>();
+	private ArrayList<LinkedHashMap<Station, Long>> intentions = new ArrayList<LinkedHashMap<Station, Long>>();
 	private ArrayList<User> passengers = new ArrayList<>();
 	
 	private Station current; 
@@ -95,19 +99,19 @@ class Pod extends Vehicle {
 			// Send out the ants, fetch the intentions to the destination and make a make the shortest one in size the desire of this pod.
 			if(dest != current) {
 				getIntentions().clear();
-				current.receiveExplorationAnt(new ArrayList<Station>(), dest, START_HOP_COUNT);
-				
-				if(!getIntentions().isEmpty()) {
-					ArrayList<Station> curBest = getIntentions().get(0);
-					for(ArrayList<Station> i : getIntentions()) {
-						if(i.size() < curBest.size()) {
+				current.receiveExplorationAnt(new LinkedHashMap<Station,Long>(), dest, START_HOP_COUNT);
+
+				if(!getIntentions().isEmpty()) {	
+					LinkedHashMap<Station, Long> curBest = getIntentions().get(0);
+					for(LinkedHashMap<Station, Long> i : getIntentions()) {
+						if(i.get(dest) < curBest.get(dest)) {
 							curBest = i;
 						}
 					}
-					
+
 					if(PeopleMover.DEBUGGING) {
 						System.out.print("The best intention is: (");
-						for(Station s: curBest) {
+						for(Station s: curBest.keySet()) {
 							System.out.print(s.getPosition()+ ", ");
 						}
 						System.out.println("). Making reservations now...");
@@ -182,16 +186,27 @@ class Pod extends Vehicle {
 	 * 
 	 * @param curBest - The exploration result
 	 */
-	public void makeReservations(ArrayList<Station> curBest) {
+	public void makeReservations(LinkedHashMap<Station, Long> curBest) {
 		ArrayList<Reservation> res = new ArrayList<Reservation>();
-		Station prev = null;
+		Reservation prev = null;
 		
 		// Initialize a list of empty reservations per station.
-		for(Station s : curBest) {
-			res.add(new Reservation(s, prev, null, 0, this));
-			prev = s;
+		for(Entry<Station, Long> e : curBest.entrySet()) {
+			
+			Reservation r = null;
+			if(prev != null) {
+				r = new Reservation(e.getKey(), prev.getStation(), null, 0, this);
+				prev.setTime(TimeWindow.create(curBest.get(prev.getStation()), e.getValue()));
+			} else {
+				r = new Reservation(e.getKey(), null, null, 0, this);
+			}
+			
+			prev = r;
+			res.add(r);			
 		}
-		current.receiveReservationAnt(res, System.currentTimeMillis(), false);
+		prev.setTime(TimeWindow.create(curBest.get(prev.getStation()), curBest.get(prev.getStation()) + END_STATION_TIME));
+		
+		current.receiveReservationAnt(res, false);
 	}
 
 	/**
@@ -200,6 +215,9 @@ class Pod extends Vehicle {
 	 * @param res - The sequence of reservations, in reverse order.
 	 */
 	public void confirmReservations(ArrayList<Reservation> res) {
+		System.err.println(getRoadModel().getPosition(this));
+		for(Reservation r : res)
+			System.out.println(r.getStation().getPosition() +", "+ r.getTime());
 		Collections.reverse(res);
 		setDesire(res);
 	}
@@ -209,7 +227,7 @@ class Pod extends Vehicle {
 	 */
 	public void refreshReservations() {
 		getDesire().add(0, new Reservation(current, null, currentWindow, 0, this));
-		current.receiveReservationAnt(getDesire(), System.currentTimeMillis(), true);
+		current.receiveReservationAnt(getDesire(), true);
 	}
 	
 	/**
@@ -217,7 +235,7 @@ class Pod extends Vehicle {
 	 * 
 	 * @param stations - An arraylist of stations.
 	 */
-	public void receiveExplorationResult(ArrayList<Station> stations) {
+	public void receiveExplorationResult(LinkedHashMap<Station,Long> stations) {
 		this.getIntentions().add(stations);
 	}
 
@@ -249,11 +267,11 @@ class Pod extends Vehicle {
 		this.passengers = passengers;
 	}
 
-	public ArrayList<ArrayList<Station>> getIntentions() {
+	public ArrayList<LinkedHashMap<Station, Long>> getIntentions() {
 		return intentions;
 	}
 
-	public void setIntentions(ArrayList<ArrayList<Station>> intentions) {
+	public void setIntentions(ArrayList<LinkedHashMap<Station, Long>> intentions) {
 		this.intentions = intentions;
 	}
 
