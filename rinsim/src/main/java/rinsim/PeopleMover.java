@@ -55,7 +55,7 @@ public class PeopleMover {
 		Builder view = createGui();
 
 		final Simulator simulator = Simulator.builder()
-			      .addModel(RoadModelBuilders.staticGraph(gm.getGraph()))
+			      .addModel(RoadModelBuilders.staticGraph(gm.getGraph2()))
 			      .addModel(DefaultPDPModel.builder())
 			      .addModel(view)
 			      .build();
@@ -64,7 +64,7 @@ public class PeopleMover {
 		final RoadModel roadModel = simulator.getModelProvider().getModel(RoadModel.class);
 		
 		// Create a station on every vertex of the graph.
-		for(Point p : gm.getGraph().getNodes()) {
+		for(Point p : gm.getGraph2().getNodes()) {
 			Station s = new Station(p);
 			addStation(s);
 			simulator.register(s);
@@ -76,7 +76,7 @@ public class PeopleMover {
 		}
 		
 		// Set the neighbours for each station.
-		for(Connection<?> c : gm.getGraph().getConnections()) {
+		for(Connection<?> c : gm.getGraph2().getConnections()) {
 			Station s1 = getStationAtPoint(c.from());
 			Station s2 = getStationAtPoint(c.to());
 			
