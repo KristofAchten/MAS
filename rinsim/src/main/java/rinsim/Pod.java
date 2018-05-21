@@ -22,8 +22,8 @@ class Pod extends Vehicle {
 	private static final int START_HOP_COUNT = 5;
 	// The maximal time left of a reservation before it is refreshed. 
 	private static final int RESERVATION_DIF = 500;
-	// The reservation time at and end station.
-	private static final int END_STATION_TIME = 20000;
+	// The reservation time at an end station.
+	private static final int END_STATION_TIME = 999999999;
 	// The pod speed.
 	private static final double SPEED = 200d;
 
@@ -62,6 +62,7 @@ class Pod extends Vehicle {
 			setCurrent(rm.getObjectsAt(this, Station.class).iterator().next());
 			current.setPod(this);
 		} else if(current != null){
+			removeCurrentReservation();
 			current.setPod(null);
 			setCurrent(null);
 			return;
@@ -99,7 +100,7 @@ class Pod extends Vehicle {
 			// Send out the ants, fetch the intentions to the destination and make a make the shortest one in size the desire of this pod.
 			if(dest != current) {
 				getIntentions().clear();
-				current.receiveExplorationAnt(new LinkedHashMap<Station,Long>(), dest, START_HOP_COUNT);
+				current.receiveExplorationAnt(new LinkedHashMap<Station,Long>(), dest, START_HOP_COUNT, this);
 
 				if(!getIntentions().isEmpty()) {	
 					LinkedHashMap<Station, Long> curBest = getIntentions().get(0);
@@ -165,12 +166,23 @@ class Pod extends Vehicle {
 			
 			if(PeopleMover.DEBUGGING)
 				System.out.println("Added "+r.getStation().getPosition() + " to the movingQueue of Pod " + this +" at " + rm.getPosition(this) + " " + current
-						+ " during tick: " + time);
+						+ " at " + System.currentTimeMillis());
 			
 			// Set the current fields
 			currentWindow = r.getTime();
 			movingQueue.add(r.getStation().getPosition());
 		}
+	}
+
+	private void removeCurrentReservation() {
+		Reservation toRemove = null;
+		for(Reservation r : current.getReservations())
+			if(r.getPod() == this) {
+				toRemove = r;
+				break;
+			}
+		
+		current.getReservations().remove(toRemove);
 	}
 
 	public TimeWindow getCurrentWindow() {
@@ -189,7 +201,6 @@ class Pod extends Vehicle {
 	public void makeReservations(LinkedHashMap<Station, Long> curBest) {
 		ArrayList<Reservation> res = new ArrayList<Reservation>();
 		Reservation prev = null;
-		
 		// Initialize a list of empty reservations per station.
 		for(Entry<Station, Long> e : curBest.entrySet()) {
 			
@@ -204,6 +215,7 @@ class Pod extends Vehicle {
 			prev = r;
 			res.add(r);			
 		}
+		
 		prev.setTime(TimeWindow.create(curBest.get(prev.getStation()), curBest.get(prev.getStation()) + END_STATION_TIME));
 		
 		current.receiveReservationAnt(res, false);
@@ -215,9 +227,6 @@ class Pod extends Vehicle {
 	 * @param res - The sequence of reservations, in reverse order.
 	 */
 	public void confirmReservations(ArrayList<Reservation> res) {
-		System.err.println(getRoadModel().getPosition(this));
-		for(Reservation r : res)
-			System.out.println(r.getStation().getPosition() +", "+ r.getTime());
 		Collections.reverse(res);
 		setDesire(res);
 	}

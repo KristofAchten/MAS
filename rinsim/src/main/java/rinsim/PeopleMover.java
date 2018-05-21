@@ -23,9 +23,9 @@ import com.github.rinde.rinsim.ui.renderers.RoadUserRenderer;
 public class PeopleMover {
 	
 	// Are we currently debugging? -> will enable informative printouts.
-	public static final boolean DEBUGGING = true;
+	public static final boolean DEBUGGING = false;
 	// The number of pods in the simulation.
-	private static final int NUM_PODS = 5;
+	private static final int NUM_PODS = 3;
 	// The number of loading docks in the road model.
 	private static final int NUM_LOADINGDOCKS = 3;
 	// The number of users at the start of the simulation.
@@ -35,7 +35,9 @@ public class PeopleMover {
 	// The number of charging spaces per charging dock.
 	private static final int MAX_CHARGECAPACITY = 1; 
 	// The probability of a new user spawning.
-	private static final double SPAWN_RATE = 0.001;
+	private static final double SPAWN_RATE = 0.01;
+	// The maximal number of users on the graph at any time. Can be overridden by NUM_USERS.
+	private static final int MAX_USERS = 5;
 	
 	private ArrayList<Station> stations = new ArrayList<>();
 	
@@ -102,17 +104,9 @@ public class PeopleMover {
 		simulator.addTickListener(new TickListener() {
 			@Override
 			public void tick(TimeLapse timeLapse) {
-			//System.err.println("NEXT!");
-				
-			//	for(Station s : getStations()) {
-			//		System.out.print(s+":");
-			//		for(Reservation r : s.getReservations())
-			//			System.out.print(r.getTime()+", ");
-			//		System.out.println();
-			//	}
 				
 				// Spawn a new user (sometimes).
-				if(r.nextDouble() < SPAWN_RATE) {
+				if(r.nextDouble() < SPAWN_RATE && roadModel.getObjectsOfType(User.class).size() < MAX_USERS) {
 					addRandomUser(roadModel, r, simulator);
 				}
 				
@@ -137,7 +131,6 @@ public class PeopleMover {
 					for(Reservation r : s.getReservations()) {
 						if(r.getExpirationTime() < System.currentTimeMillis()) {
 							toRemoveRes.add(r);
-							System.out.println("removing for "+r.getPod());
 						}
 					}
 					s.getReservations().removeAll(toRemoveRes);
