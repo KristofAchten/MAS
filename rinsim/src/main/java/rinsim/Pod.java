@@ -19,7 +19,7 @@ import com.github.rinde.rinsim.util.TimeWindow;
 class Pod extends Vehicle {
 	
 	// Number of hops the exploration ants are maximally going to take before being returned. 
-	private static final int START_HOP_COUNT = 5;
+	private static final int START_HOP_COUNT = 10;
 	// The maximal time left of a reservation before it is refreshed. 
 	private static final int RESERVATION_DIF = 500;
 	// The reservation time at an end station.
@@ -96,13 +96,16 @@ class Pod extends Vehicle {
 					System.out.println("Pod "+this+" has sent out exploration ants to a random neighbour" + dest +" at " + 
 							dest.getPosition() + ". He's currently at " + rm.getPosition(this));
 			}
+			
+			
 
 			// Send out the ants, fetch the intentions to the destination and make a make the shortest one in size the desire of this pod.
 			if(dest != current) {
 				getIntentions().clear();
 				current.receiveExplorationAnt(new LinkedHashMap<Station,Long>(), dest, START_HOP_COUNT, this);
 
-				if(!getIntentions().isEmpty()) {	
+				
+				if(!getIntentions().isEmpty()) {
 					LinkedHashMap<Station, Long> curBest = getIntentions().get(0);
 					for(LinkedHashMap<Station, Long> i : getIntentions()) {
 						if(i.get(dest) < curBest.get(dest)) {
@@ -175,14 +178,23 @@ class Pod extends Vehicle {
 	}
 
 	private void removeCurrentReservation() {
-		Reservation toRemove = null;
+		ArrayList<Reservation> toRemove = new ArrayList<>();
 		for(Reservation r : current.getReservations())
 			if(r.getPod() == this) {
-				toRemove = r;
-				break;
+				toRemove.add(r);
 			}
 		
-		current.getReservations().remove(toRemove);
+		current.getReservations().removeAll(toRemove);
+	}
+	
+	private boolean isIntentionGood(LinkedHashMap<Station, Long> intention) {
+		Long prevTime = intention.values().iterator().next();
+		for(Long time : intention.values()) {
+			if(time-prevTime > 999999995) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	public TimeWindow getCurrentWindow() {
@@ -245,6 +257,7 @@ class Pod extends Vehicle {
 	 * @param stations - An arraylist of stations.
 	 */
 	public void receiveExplorationResult(LinkedHashMap<Station,Long> stations) {
+		
 		this.getIntentions().add(stations);
 	}
 

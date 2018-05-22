@@ -23,7 +23,7 @@ import com.github.rinde.rinsim.ui.renderers.RoadUserRenderer;
 public class PeopleMover {
 	
 	// Are we currently debugging? -> will enable informative printouts.
-	public static final boolean DEBUGGING = false;
+	public static final boolean DEBUGGING = true;
 	// The number of pods in the simulation.
 	private static final int NUM_PODS = 3;
 	// The number of loading docks in the road model.
@@ -38,6 +38,9 @@ public class PeopleMover {
 	private static final double SPAWN_RATE = 0.01;
 	// The maximal number of users on the graph at any time. Can be overridden by NUM_USERS.
 	private static final int MAX_USERS = 5;
+	
+	//TEMP
+	private static final Point[] startPos = {new Point(0, 0), new Point(7.2, 2.6), new Point(13.7, 7)};
 	
 	private ArrayList<Station> stations = new ArrayList<>();
 	
@@ -91,7 +94,8 @@ public class PeopleMover {
 		
 		// Spawn in the predefined number of pods at random, but different, locations.
 		for(int i = 0; i < NUM_PODS; i++) {
-			Point pos = roadModel.getRandomPosition(r);
+			//Point pos = roadModel.getRandomPosition(r);
+			Point pos = startPos[i];
 			while(getStationAtPoint(pos).getPod() != null)
 				pos = roadModel.getRandomPosition(r);
 			Station s = getStationAtPoint(pos);

@@ -66,6 +66,10 @@ public class Station extends Depot {
 		while (iterator.hasNext()) { 
 			prevTime = iterator.next(); 
 		}
+		
+		if(checkPossibleReservationTime(prevTime+RESERVATION_TIME).begin()-prevTime > 999999995) {
+			return;
+		}
 
 		// If the ant has arrived, add this station to the list and continue the method.
 		if(this == dest) {
