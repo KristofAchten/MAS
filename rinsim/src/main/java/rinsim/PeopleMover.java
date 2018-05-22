@@ -3,6 +3,7 @@ package rinsim;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import org.apache.commons.math3.random.RandomGenerator;
 
@@ -23,7 +24,7 @@ import com.github.rinde.rinsim.ui.renderers.RoadUserRenderer;
 public class PeopleMover {
 	
 	// Are we currently debugging? -> will enable informative printouts.
-	public static final boolean DEBUGGING = true;
+	public static final boolean DEBUGGING = false;
 	// The number of pods in the simulation.
 	private static final int NUM_PODS = 3;
 	// The number of loading docks in the road model.
@@ -43,6 +44,7 @@ public class PeopleMover {
 	private static final Point[] startPos = {new Point(0, 0), new Point(7.2, 2.6), new Point(13.7, 7)};
 	
 	private ArrayList<Station> stations = new ArrayList<>();
+	private ArrayList<LoadingDock> loadingDocks = new ArrayList<>();
 	
 	public static void main(String[] args) throws URISyntaxException, IOException {
 		PeopleMover pm = new PeopleMover();
@@ -68,14 +70,18 @@ public class PeopleMover {
 		
 		// Create a station on every vertex of the graph.
 		for(Point p : gm.getGraph2().getNodes()) {
-			Station s = new Station(p);
-			addStation(s);
-			simulator.register(s);
+			if(!Arrays.asList(startPos).contains(p)) {
+				Station s = new Station(p);
+				addStation(s);
+				simulator.register(s);
+			}
 		}
 		
 		// Create a set amount of loading docks at random positions. TODO: check that these are not identical?
 		for(int i = 0; i < NUM_LOADINGDOCKS; i++) {
-			simulator.register(new LoadingDock(roadModel.getRandomPosition(r), MAX_CHARGECAPACITY));
+			LoadingDock l = new LoadingDock(startPos[i], MAX_CHARGECAPACITY);
+			getLoadingDocks().add(l);
+			simulator.register(l);
 		}
 		
 		// Set the neighbours for each station.
@@ -223,5 +229,13 @@ public class PeopleMover {
 			System.out.println("Added a user to station "+start+" at position "+startpos+". His destination is the station at position "+endpos);
 		
 		simulator.register(u);
+	}
+
+	public ArrayList<LoadingDock> getLoadingDocks() {
+		return loadingDocks;
+	}
+
+	public void setLoadingDocks(ArrayList<LoadingDock> loadingDocks) {
+		this.loadingDocks = loadingDocks;
 	}
 }

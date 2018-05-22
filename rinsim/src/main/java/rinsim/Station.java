@@ -14,7 +14,7 @@ import com.github.rinde.rinsim.util.TimeWindow;
 public class Station extends Depot {
 	
 	// The time that each reservation should last.
-	public static long RESERVATION_TIME = 5000;
+	public static long RESERVATION_TIME = 3000;
 	// The time after which a reservation will expire.
 	public static long EXPIRATION_TIME = 500000000;
 	// The time between each reservation in the sequence.
