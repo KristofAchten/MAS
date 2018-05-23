@@ -2,6 +2,7 @@ package rinsim;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map.Entry;
@@ -30,6 +31,8 @@ class Pod extends Vehicle {
 	private static final double BATTERY_DRAIN = 0.1;
 	// The amount a battery gets charged per tick when at a loading dock.
 	private static final double BATTERY_GAIN = 0.5;
+	// The threshold  on which the pod will go recharge.
+	private static final double BATTERY_THRESHOLD = 40;
 	
 	private ArrayList<Reservation> desire = new ArrayList<>();
 	private ArrayList<LinkedHashMap<Station, Long>> intentions = new ArrayList<LinkedHashMap<Station, Long>>();
@@ -89,15 +92,24 @@ class Pod extends Vehicle {
 				Reservation r = getCurrentLoadingDock().leave(this);
 				currentWindow = r.getTime();
 				movingQueue.add(r.getStation().getPosition());			
-			}			
+			}
 			return;
 		}	
 			
 		// If no desire is active and we're done moving: send out exploration ants using roadsign info
 		if(getDesire().isEmpty() && movingQueue.isEmpty()) {
 			Station dest = null;
+			
+			if(getBattery() < BATTERY_THRESHOLD) {
+				if(getCurrentStation().getLoadingDocks().isEmpty())
+					dest = null;
+				else {
+					movingQueue.add(getCurrentStation().getLoadingDocks().get(0).getPosition());
+					return;
+				}
+			}
 			// If there are no passengers but there are roadsigns: explore using the most prominent roadsign.
-			if(currentStation.getPassengers().isEmpty() && !currentStation.getRoadsigns().isEmpty()) {
+			else if(currentStation.getPassengers().isEmpty() && !currentStation.getRoadsigns().isEmpty()) {
 				ArrayList<RoadSign> rs = currentStation.getRoadsigns();
 				Collections.sort(rs);
 				dest = rs.get(0).getEndStation();
@@ -126,12 +138,19 @@ class Pod extends Vehicle {
 			if(dest != currentStation) {
 				getIntentions().clear();
 				currentStation.receiveExplorationAnt(new LinkedHashMap<Station,Long>(), dest, START_HOP_COUNT, this);
-
+			
 				
 				if(!getIntentions().isEmpty()) {
 					LinkedHashMap<Station, Long> curBest = getIntentions().get(0);
 					for(LinkedHashMap<Station, Long> i : getIntentions()) {
-						if(i.get(dest) < curBest.get(dest)) {
+						Iterator<Long> it = i.values().iterator();
+						Long val = it.next();
+						while(it.hasNext()) {val = it.next();}
+						
+						it = curBest.values().iterator();
+						Long bestVal = it.next();
+						while(it.hasNext()) {bestVal = it.next();}
+						if(val < bestVal) {
 							curBest = i;
 						}
 					}

@@ -226,23 +226,27 @@ public class PeopleMover {
 	 * @param simulator - The specific simulation instance
 	 */
 	public void addRandomUser(RoadModel roadModel, RandomGenerator r, Simulator simulator) {
-		Point startpos = roadModel.getRandomPosition(r);
-		Point endpos = roadModel.getRandomPosition(r);
-		Station start = (Station) getStationAtPoint(startpos);
+		Point startPosition = roadModel.getRandomPosition(r);
+		while (Arrays.asList(startPos).contains(startPosition)) {
+			roadModel.getRandomPosition(r);
+		}
+		Station start = (Station) getStationAtPoint(startPosition);
 
+		
+		Point endpos = roadModel.getRandomPosition(r);
 		// Find a random endposition that is different from the starting position.
-		while(startpos.equals(endpos))
+		while(startPosition.equals(endpos) && Arrays.asList(startPos).contains(endpos))
 			endpos = roadModel.getRandomPosition(r);
 		
 		User u = new User
-				(Parcel.builder (startpos, endpos)
+				(Parcel.builder (startPosition, endpos)
 				.buildDTO(), 0, (Station) getStationAtPoint(endpos));
 		
 		// Add the new user to the station it spawned in.
 		start.getPassengers().add(u);
 		
 		if(DEBUGGING)
-			System.out.println("Added a user to station "+start+" at position "+startpos+". His destination is the station at position "+endpos);
+			System.out.println("Added a user to station "+start+" at position "+startPosition+". His destination is the station at position "+endpos);
 		
 		simulator.register(u);
 	}

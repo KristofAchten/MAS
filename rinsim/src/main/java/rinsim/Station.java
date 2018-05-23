@@ -57,6 +57,8 @@ public class Station extends Depot {
 	 * @param hop - The current hop-count. -1 indicates that the returning process is ongoing.
 	 */
 	private void forwardExploration(LinkedHashMap<Station,Long> prev, Station dest, int hop, Pod pod) {
+		if(dest == null && !getLoadingDocks().isEmpty())
+			dest = this;
 		
 		// If the hops have run out or loop has been detected (station is already in prev): kill the chain.
 		if((hop == 0 && this != dest) || (prev.keySet().contains(this) && hop != -1))
@@ -94,6 +96,7 @@ public class Station extends Depot {
 				curStation = it.next();
 			}
 			prevStation.receiveExplorationAnt(new LinkedHashMap<Station, Long>(prev), dest, -1, pod);
+		
 		// Else: Add this station and forward to each neighbour a copy of the current list (to avoid double modifications).	
 		} else {
 			if(getPod() == pod)
