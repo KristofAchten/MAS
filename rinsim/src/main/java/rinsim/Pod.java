@@ -44,13 +44,13 @@ class Pod extends Vehicle {
 	Random r = new Random();
 	
 	
-	protected Pod(Point startPos, int cap, Station current) {
+	protected Pod(Point startPos, int cap, LoadingDock start) {
 		super(VehicleDTO.builder()
 				.capacity(cap)
 				.startPosition(startPos)
 				.speed(SPEED)
 				.build());
-		setCurrentStation(current);
+		setCurrentLoadingDock(start);
 	}
 
 	@Override
@@ -78,13 +78,21 @@ class Pod extends Vehicle {
 			return;
 		} else if (getCurrentLoadingDock() != null) {
 			setCurrentLoadingDock(null);
+			return;
 		} else {
 			return;
 		}
-		
-		if(getCurrentLoadingDock() != null)
-			setBattery(getBattery() + BATTERY_GAIN); 
-		
+			
+		if(getCurrentLoadingDock() != null) {
+			setBattery(getBattery() + BATTERY_GAIN);
+			if(getBattery() >= 100 && movingQueue.isEmpty()) {
+				Reservation r = getCurrentLoadingDock().leave(this);
+				currentWindow = r.getTime();
+				movingQueue.add(r.getStation().getPosition());			
+			}			
+			return;
+		}	
+			
 		// If no desire is active and we're done moving: send out exploration ants using roadsign info
 		if(getDesire().isEmpty() && movingQueue.isEmpty()) {
 			Station dest = null;

@@ -9,6 +9,7 @@ import org.apache.commons.math3.random.RandomGenerator;
 
 import com.github.rinde.rinsim.core.Simulator;
 import com.github.rinde.rinsim.core.model.pdp.DefaultPDPModel;
+import com.github.rinde.rinsim.core.model.pdp.Depot;
 import com.github.rinde.rinsim.core.model.pdp.Parcel;
 import com.github.rinde.rinsim.core.model.road.RoadModel;
 import com.github.rinde.rinsim.core.model.road.RoadModelBuilders;
@@ -88,9 +89,19 @@ public class PeopleMover {
 		for(Connection<?> c : gm.getGraph2().getConnections()) {
 			Station s1 = getStationAtPoint(c.from());
 			Station s2 = getStationAtPoint(c.to());
-			
-			s1.getNeighbours().add(s2);
-			s2.getNeighbours().add(s1);
+			LoadingDock d1 = getLoadingDockAtPoint(c.from());
+			LoadingDock d2 = getLoadingDockAtPoint(c.to());
+
+			if(s1 == null) {
+				d1.getNeighbours().add(s2);
+				s2.getLoadingDocks().add(d1);
+			} else if(s2 == null) {
+				d2.getNeighbours().add(s1);
+				s1.getLoadingDocks().add(d2);
+			} else {	
+				s1.getNeighbours().add(s2);
+				s2.getNeighbours().add(s1);
+			}
 		}
 		
 		// Spawn in the original number of users.
@@ -102,9 +113,7 @@ public class PeopleMover {
 		for(int i = 0; i < NUM_PODS; i++) {
 			//Point pos = roadModel.getRandomPosition(r);
 			Point pos = startPos[i];
-			while(getStationAtPoint(pos).getPod() != null)
-				pos = roadModel.getRandomPosition(r);
-			Station s = getStationAtPoint(pos);
+			LoadingDock s = getLoadingDockAtPoint(pos);
 			Pod p = new Pod(pos, MAX_PODCAPACITY, s);
 			s.setPod(p);
 			simulator.register(p);
@@ -194,11 +203,18 @@ public class PeopleMover {
 	 * @return Station at position p
 	 */
 	public Station getStationAtPoint(Point p) {
-		for(Station s : getStations()) {
-			if(s.getPosition().equals(p)) {
+		for(Station s : getStations()) 	
+			if(s.getPosition().equals(p)) 
 				return s;
-			}
-		}
+		
+		return null;
+	}
+	
+	public LoadingDock getLoadingDockAtPoint(Point p) {
+		for(LoadingDock d : getLoadingDocks())
+			if(d.getPosition().equals(p))
+				return d;
+		
 		return null;
 	}
 	
@@ -212,7 +228,7 @@ public class PeopleMover {
 	public void addRandomUser(RoadModel roadModel, RandomGenerator r, Simulator simulator) {
 		Point startpos = roadModel.getRandomPosition(r);
 		Point endpos = roadModel.getRandomPosition(r);
-		Station start = getStationAtPoint(startpos);
+		Station start = (Station) getStationAtPoint(startpos);
 
 		// Find a random endposition that is different from the starting position.
 		while(startpos.equals(endpos))
@@ -220,7 +236,7 @@ public class PeopleMover {
 		
 		User u = new User
 				(Parcel.builder (startpos, endpos)
-				.buildDTO(), 0, getStationAtPoint(endpos));
+				.buildDTO(), 0, (Station) getStationAtPoint(endpos));
 		
 		// Add the new user to the station it spawned in.
 		start.getPassengers().add(u);

@@ -25,6 +25,7 @@ public class Station extends Depot {
 	private ArrayList<RoadSign> roadsigns = new ArrayList<>();
 	private ArrayList<Station> neighbours = new ArrayList<>();
 	private ArrayList<User> passengers = new ArrayList<>();
+	private ArrayList<LoadingDock> loadingDocks = new ArrayList<>();
 	private Pod pod = null;
 	private Random rand = new Random();
 	private Point position;
@@ -331,5 +332,13 @@ public class Station extends Depot {
 
 	public void setPosition(Point position) {
 		this.position = position;
+	}
+
+	public ArrayList<LoadingDock> getLoadingDocks() {
+		return loadingDocks;
+	}
+
+	public void setLoadingDocks(ArrayList<LoadingDock> loadingDocks) {
+		this.loadingDocks = loadingDocks;
 	}	
 }
