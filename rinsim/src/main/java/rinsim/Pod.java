@@ -58,7 +58,6 @@ class Pod extends Vehicle {
 
 	@Override
 	protected void tickImpl(TimeLapse time) {
-		System.out.println(this+": "+getBattery());
 		RoadModel rm = getRoadModel();
 		PDPModel pm = getPDPModel();
 		
