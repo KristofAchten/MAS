@@ -228,7 +228,7 @@ public class PeopleMover {
 	public void addRandomUser(RoadModel roadModel, RandomGenerator r, Simulator simulator) {
 		Point startPosition = roadModel.getRandomPosition(r);
 		while (Arrays.asList(startPos).contains(startPosition)) {
-			roadModel.getRandomPosition(r);
+			startPosition = roadModel.getRandomPosition(r);
 		}
 		Station start = (Station) getStationAtPoint(startPosition);
 
