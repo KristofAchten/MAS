@@ -1,9 +1,21 @@
-- Check TODOs
-- Maybe add max number of users
-- When exploring the first passenger in a row: maybe pick the most optimal one? (= the route where the biggest subset of passengers at that station gets delivered)
-- Er worden meerdere moves tegelijk toegevoegd aan een pod's movingqueue? :o
+TODO:
+	K + M - Testing
+	K - Delivery time for users	-ALL DEADLINES (except for full research): 27/5: 23u59
+	K - Optimal user pickup (+^)
+	M - Research
 
+Research questions:
+	OBJECTIVE: 	- Compare the performances of a basic FCFS task planning algorithm against a more sophisticated one with optimal task allocation.
+			- Present our findings during the feedback sessions on the 13th of June.
+	QUESTIONS: 	- Does the sophisticated approach, on average, deliver more users on time than the FCFS approach?
+			- Does a higher user arrival rate change this? (building on the result of ^)?
+			- When deliveries occur after the parcel deadline has expired, what is the average delay for the sophisticated approach compared to the FCFS approach?
+	HYPOTHESES: 	- FCFS task planning will deliver less users on time when the arrival rate of users increases.
+			- When the arrival rate of users is low, both methods will give similar performance.
+			- The delays measured with FCFS task planning will be higher than the ones measured with the sophisticated approach.
+	VARIABLES:	- INDEPENDENT: User arrival rate {DOUBLE: 0 - 1 / tick}, Task planning algorithm {METHOD: FCFS, Sophisticated}
+			- DEPENDENT: Number of timely deliveries, delay.
+			- Number of pods, Number of loading-docks, graph model, speed, reservation timings
+			
 
-21/5: Reservations fixen + optimale passagierskeuze
-	- Maak laatste reservatie enorm lang? => Remove die reservatie wanneer je vertrekt.
-22/5: Loadingdocks
+	
