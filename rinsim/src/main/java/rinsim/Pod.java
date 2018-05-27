@@ -44,6 +44,8 @@ class Pod extends Vehicle {
 	private Queue<Point> movingQueue = new LinkedList<Point>();
 	private TimeWindow currentWindow = null;
 	
+	private long lastRefresh = System.currentTimeMillis();
+	
 	Random r = new Random();
 	
 	
@@ -58,6 +60,7 @@ class Pod extends Vehicle {
 
 	@Override
 	protected void tickImpl(TimeLapse time) {
+		boolean improvedRouting = false;
 		RoadModel rm = getRoadModel();
 		PDPModel pm = getPDPModel();
 		
@@ -95,9 +98,10 @@ class Pod extends Vehicle {
 			return;
 		}	
 			
-		// If no desire is active and we're done moving: send out exploration ants using roadsign info
-		if(getDesire().isEmpty() && movingQueue.isEmpty()) {
+		// If no desire is active, the last refresh was more than 1.5s away and we're done moving: send out exploration ants using roadsign info
+		if(getDesire().isEmpty() && movingQueue.isEmpty() && (System.currentTimeMillis() - getLastRefresh() > 1500)) {
 			Station dest = null;
+			setLastRefresh(System.currentTimeMillis());
 			
 			if(getBattery() < BATTERY_THRESHOLD) {
 				if(getCurrentStation().getLoadingDocks().isEmpty())
@@ -117,11 +121,30 @@ class Pod extends Vehicle {
 							+ " at " +dest.getPosition()+".");
 			// Else if there are passengers: get the one that arrived first and explore to his destination.		
 			} else if(!currentStation.getPassengers().isEmpty()) {
-				User u = currentStation.getPassengers().get(0);
-				dest = u.getDestination();
-				if(PeopleMover.DEBUGGING)
-					System.out.println("Pod "+this+" has sent out exploration ants using the destination" + dest +" at " + 
-							dest.getPosition() + " of a passenger.");
+				if(PeopleMover.ADVANCED_PLANNING) {
+					getIntentions().clear();
+					for(User u : getCurrentStation().getPassengers()) {
+						currentStation.receiveExplorationAnt(new LinkedHashMap<Station,Long>(), u.getDestination(), START_HOP_COUNT, this);
+					}
+					LinkedHashMap<Station, Long> curBest = findBestRouteAdvanced();
+					
+					if(PeopleMover.DEBUGGING) {
+						System.out.print("The pod has determined the most optimal route to be: (");
+						for(Station s: curBest.keySet()) {
+							System.out.print(s.getPosition()+ ", ");
+						}
+						System.out.println("). Making reservations now...");
+					}
+					
+					makeReservations(curBest);
+					improvedRouting = true;
+				} else {				
+					User u = currentStation.getPassengers().get(0);
+					dest = u.getDestination();
+					if(PeopleMover.DEBUGGING)
+						System.out.println("Pod "+this+" has sent out exploration ants using the destination" + dest +" at " + 
+								dest.getPosition() + " of a passenger.");
+				}				
 			// Else: just try to get to a random neighbour and hope there's something to do there.
 			} else {
 				int n = r.nextInt(currentStation.getNeighbours().size());
@@ -134,7 +157,7 @@ class Pod extends Vehicle {
 			
 
 			// Send out the ants, fetch the intentions to the destination and make a make the shortest one in size the desire of this pod.
-			if(dest != currentStation) {
+			if(dest != currentStation && !improvedRouting) {
 				getIntentions().clear();
 				currentStation.receiveExplorationAnt(new LinkedHashMap<Station,Long>(), dest, START_HOP_COUNT, this);
 			
@@ -174,9 +197,12 @@ class Pod extends Vehicle {
 			if(u.getDestination() == currentStation) {
 				toRemove.add(u);
 				pm.deliver(this, u, time);
-				if(PeopleMover.DEBUGGING)
-					System.out.println("Ik zie een driekwartsbroek... User with destination " + u.getDeliveryLocation() + "has arrived at "
+				if(PeopleMover.DEBUGGING) {
+					System.out.print("Ik zie een driekwartsbroek... User with destination " + u.getDeliveryLocation() + "has arrived at "
 							+ rm.getPosition(this));
+					if(u.getDeadline() < System.currentTimeMillis())
+						System.out.print(". Unfortunately, he arrived with a delay of " + (System.currentTimeMillis() - u.getDeadline())+"ms.");
+				}
 			}
 		}
 		getPassengers().removeAll(toRemove);
@@ -218,6 +244,39 @@ class Pod extends Vehicle {
 			currentWindow = r.getTime();
 			movingQueue.add(r.getStation().getPosition());
 		}
+	}
+
+	public long getLastRefresh() {
+		return lastRefresh;
+	}
+
+	public void setLastRefresh(long lastRefresh) {
+		this.lastRefresh = lastRefresh;
+	}
+
+	private LinkedHashMap<Station, Long> findBestRouteAdvanced() {
+		LinkedHashMap<Station, Long> best = null;
+		int bestNumPass = 0;
+		ArrayList<Station> passengerDestinations = new ArrayList<>();
+		for(User p : getCurrentStation().getPassengers()) {
+			passengerDestinations.add(p.getDestination());
+		}
+		
+		for(LinkedHashMap<Station, Long> intention : getIntentions()) {
+			int numPass = calculateDestinationsOnRoute(intention, passengerDestinations);
+			if(numPass > bestNumPass) {
+				bestNumPass = numPass;
+				best = intention;
+			}
+			
+		}
+		return best;
+	}
+
+	private int calculateDestinationsOnRoute(LinkedHashMap<Station, Long> intention, ArrayList<Station> passengerDestinations) {
+		ArrayList<Station> rest = new ArrayList<Station>(passengerDestinations);
+		rest.retainAll(intention.keySet());
+		return rest.size();
 	}
 
 	private void removeCurrentReservation() {

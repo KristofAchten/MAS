@@ -5,8 +5,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Random;
 
-import javax.measure.unit.SystemOfUnits;
-
 import com.github.rinde.rinsim.core.model.pdp.Depot;
 import com.github.rinde.rinsim.geom.Point;
 import com.github.rinde.rinsim.util.TimeWindow;
@@ -156,7 +154,7 @@ public class Station extends Depot {
 			// If there is a previous station, forward the sequence
 			if(current.getPrevStation() != null)
 				current.getPrevStation().sendConfirmation(ret);
-			// If not: the list only contains one station: it's current position. TODO - is dit nodig? Not sure of dit ooit het geval is.
+			// If not: the list only contains one station: it's current position.
 			else {
 				current.getStation().getPod().confirmReservations(ret);
 				if(PeopleMover.DEBUGGING)

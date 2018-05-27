@@ -9,7 +9,6 @@ import org.apache.commons.math3.random.RandomGenerator;
 
 import com.github.rinde.rinsim.core.Simulator;
 import com.github.rinde.rinsim.core.model.pdp.DefaultPDPModel;
-import com.github.rinde.rinsim.core.model.pdp.Depot;
 import com.github.rinde.rinsim.core.model.pdp.Parcel;
 import com.github.rinde.rinsim.core.model.road.RoadModel;
 import com.github.rinde.rinsim.core.model.road.RoadModelBuilders;
@@ -26,6 +25,8 @@ public class PeopleMover {
 	
 	// Are we currently debugging? -> will enable informative printouts.
 	public static final boolean DEBUGGING = false;
+	// Are we currently using the sophisticated task planning algorithm?
+	public static final boolean ADVANCED_PLANNING = false;
 	// The number of pods in the simulation.
 	private static final int NUM_PODS = 3;
 	// The number of loading docks in the road model.
@@ -40,6 +41,8 @@ public class PeopleMover {
 	private static final double SPAWN_RATE = 0.01;
 	// The maximal number of users on the graph at any time. Can be overridden by NUM_USERS.
 	private static final int MAX_USERS = 5;
+	// The delivery deadline that we should try to meet for each user.
+	private static final int DELIVERY_DEADLINE = 120000; // 2 minutes
 	
 	//TEMP
 	private static final Point[] startPos = {new Point(0, 0), new Point(7.2, 2.6), new Point(13.7, 7)};
@@ -78,7 +81,7 @@ public class PeopleMover {
 			}
 		}
 		
-		// Create a set amount of loading docks at random positions. TODO: check that these are not identical?
+		// Create a set amount of loading docks at random positions.
 		for(int i = 0; i < NUM_LOADINGDOCKS; i++) {
 			LoadingDock l = new LoadingDock(startPos[i], MAX_CHARGECAPACITY);
 			getLoadingDocks().add(l);
@@ -240,7 +243,7 @@ public class PeopleMover {
 		
 		User u = new User
 				(Parcel.builder (startPosition, endpos)
-				.buildDTO(), 0, (Station) getStationAtPoint(endpos));
+				.buildDTO(), System.currentTimeMillis() + DELIVERY_DEADLINE, (Station) getStationAtPoint(endpos));
 		
 		// Add the new user to the station it spawned in.
 		start.getPassengers().add(u);
