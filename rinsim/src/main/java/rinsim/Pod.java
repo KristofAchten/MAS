@@ -45,6 +45,7 @@ class Pod extends Vehicle {
 	private TimeWindow currentWindow = null;
 	
 	private long lastRefresh = System.currentTimeMillis();
+	private long lastMove = System.currentTimeMillis();
 	
 	Random r = new Random();
 	
@@ -64,13 +65,14 @@ class Pod extends Vehicle {
 		RoadModel rm = getRoadModel();
 		PDPModel pm = getPDPModel();
 		
-		// Only move if there is a next hop and our reservation time is respected.
+		// Only move if there is a next hop and our reservation time is respected, and the battery is not zero.
 		if(!movingQueue.isEmpty() && currentWindow.isIn(System.currentTimeMillis()) && getBattery() > 0) {
 			rm.followPath(this, movingQueue, time);
+			setLastMove(System.currentTimeMillis());
 			setBattery(getBattery() - BATTERY_DRAIN);
 		}
 		
-		// If arrived at station, set the current station. Else, reset.
+		// If arrived at station, set the current station. Same for loadingdocks. Else: reset.
 		if(!rm.getObjectsAt(this, Station.class).isEmpty()) {
 			setCurrentStation(rm.getObjectsAt(this, Station.class).iterator().next());
 			getCurrentStation().setPod(this);
@@ -87,7 +89,8 @@ class Pod extends Vehicle {
 		} else {
 			return;
 		}
-			
+		
+		// If the pod is at a loading dock, charge it. If it's full: try to leave.
 		if(getCurrentLoadingDock() != null) {
 			setBattery(getBattery() + BATTERY_GAIN);
 			if(getBattery() >= 100 && movingQueue.isEmpty()) {
@@ -98,11 +101,17 @@ class Pod extends Vehicle {
 			return;
 		}	
 			
-		// If no desire is active, the last refresh was more than 1.5s away and we're done moving: send out exploration ants using roadsign info
-		if(getDesire().isEmpty() && movingQueue.isEmpty() && (System.currentTimeMillis() - getLastRefresh() > 1500)) {
+		// If no desire is active and we're done moving, or the pod has been inactive for 10 seconds: send out exploration ants using roadsign info
+		// Only do this each 1.5s instead of every tick for performance.
+		if((((System.currentTimeMillis() - getLastMove()) > 10000) || (getDesire().isEmpty() && movingQueue.isEmpty())) && (System.currentTimeMillis() - getLastRefresh() > 1500)) {
 			Station dest = null;
 			setLastRefresh(System.currentTimeMillis());
 			
+			// Reset the desire if the pod is retrying because of inactivity.
+			if(System.currentTimeMillis() - getLastMove() > 10000)
+				setDesire(null);
+
+			// If a certain threshold is reached, start moving towards a loadingdock.
 			if(getBattery() < BATTERY_THRESHOLD) {
 				if(getCurrentStation().getLoadingDocks().isEmpty())
 					dest = null;
@@ -111,6 +120,7 @@ class Pod extends Vehicle {
 					return;
 				}
 			}
+			
 			// If there are no passengers but there are roadsigns: explore using the most prominent roadsign.
 			else if(currentStation.getPassengers().isEmpty() && !currentStation.getRoadsigns().isEmpty()) {
 				ArrayList<RoadSign> rs = currentStation.getRoadsigns();
@@ -119,7 +129,8 @@ class Pod extends Vehicle {
 				if(PeopleMover.DEBUGGING)
 					System.out.println("Pod "+this+" has sent out exploration ants using the roadsign "+rs.get(0)+" which points to " + dest 
 							+ " at " +dest.getPosition()+".");
-			// Else if there are passengers: get the one that arrived first and explore to his destination.		
+			// Else if there are passengers at the current station: get the one that arrived first and explore to his destination.
+			// Use either the optimized task planning algorithm for this, or the first-come-first-served version.
 			} else if(!currentStation.getPassengers().isEmpty()) {
 				if(PeopleMover.ADVANCED_PLANNING) {
 					getIntentions().clear();
@@ -128,16 +139,18 @@ class Pod extends Vehicle {
 					}
 					LinkedHashMap<Station, Long> curBest = findBestRouteAdvanced();
 					
-					if(PeopleMover.DEBUGGING) {
-						System.out.print("The pod has determined the most optimal route to be: (");
-						for(Station s: curBest.keySet()) {
-							System.out.print(s.getPosition()+ ", ");
+					if(curBest != null) {
+						if(PeopleMover.DEBUGGING) {
+							System.out.print("The pod has determined the most optimal route to be: (");
+							for(Station s: curBest.keySet()) {
+								System.out.print(s.getPosition()+ ", ");
+							}
+							System.out.println("). Making reservations now...");
 						}
-						System.out.println("). Making reservations now...");
+						
+						makeReservations(curBest);
+						improvedRouting = true;
 					}
-					
-					makeReservations(curBest);
-					improvedRouting = true;
 				} else {				
 					User u = currentStation.getPassengers().get(0);
 					dest = u.getDestination();
@@ -148,7 +161,7 @@ class Pod extends Vehicle {
 			// Else: just try to get to a random neighbour and hope there's something to do there.
 			} else {
 				int n = r.nextInt(currentStation.getNeighbours().size());
-				dest = currentStation.getNeighbours().get(n);
+				dest = getCurrentStation().getNeighbours().get(n);
 				if(PeopleMover.DEBUGGING)
 					System.out.println("Pod "+this+" has sent out exploration ants to a random neighbour" + dest +" at " + 
 							dest.getPosition() + ". He's currently at " + rm.getPosition(this));
@@ -156,11 +169,11 @@ class Pod extends Vehicle {
 			
 			
 
-			// Send out the ants, fetch the intentions to the destination and make a make the shortest one in size the desire of this pod.
+			// Send out the ants, fetch the intentions to the destination and make the shortest one in size the desire of this pod.
+			// Only do this when the improved task planning hasn't been used this tick.
 			if(dest != currentStation && !improvedRouting) {
 				getIntentions().clear();
 				currentStation.receiveExplorationAnt(new LinkedHashMap<Station,Long>(), dest, START_HOP_COUNT, this);
-			
 				
 				if(!getIntentions().isEmpty()) {
 					LinkedHashMap<Station, Long> curBest = getIntentions().get(0);
@@ -225,7 +238,7 @@ class Pod extends Vehicle {
 				System.out.println("Picking up " + us + " at " + rm.getPosition(this));
 		}
 		
-		// If there are no planned moves, and there is a desire, add a move from the desire.
+		// If there are no planned moves, and there is a desire: add a move from the desire.
 		if(movingQueue.isEmpty() && !getDesire().isEmpty()) {
 			
 			// If the reservation for the next hop is closer than RESERVATION_DIF away, refresh everything!
@@ -246,22 +259,22 @@ class Pod extends Vehicle {
 		}
 	}
 
-	public long getLastRefresh() {
-		return lastRefresh;
-	}
-
-	public void setLastRefresh(long lastRefresh) {
-		this.lastRefresh = lastRefresh;
-	}
-
+	/**
+	 * Find the route that can take the most users (based on the users at the current station) at once.
+	 * 
+	 * @return LinkedHashMap<Station, Long> = stations and earliest possible reservation start times for that station.
+	 */
 	private LinkedHashMap<Station, Long> findBestRouteAdvanced() {
 		LinkedHashMap<Station, Long> best = null;
 		int bestNumPass = 0;
 		ArrayList<Station> passengerDestinations = new ArrayList<>();
+		
+		// Create a list of all passenger destinations.
 		for(User p : getCurrentStation().getPassengers()) {
 			passengerDestinations.add(p.getDestination());
 		}
 		
+		// Determine the best intention.
 		for(LinkedHashMap<Station, Long> intention : getIntentions()) {
 			int numPass = calculateDestinationsOnRoute(intention, passengerDestinations);
 			if(numPass > bestNumPass) {
@@ -273,12 +286,22 @@ class Pod extends Vehicle {
 		return best;
 	}
 
+	/**
+	 * Determine the intersection of the provided lists.
+	 * 
+	 * @param intention - LinkedHashMap<Station, Long> = hashmap of stations and their earliest possible reservation times.
+	 * @param passengerDestinations - ArrayList<Station> = list of passenger destinations for this station.
+	 * @return int n = the number of elements that exist in both lists.
+	 */
 	private int calculateDestinationsOnRoute(LinkedHashMap<Station, Long> intention, ArrayList<Station> passengerDestinations) {
 		ArrayList<Station> rest = new ArrayList<Station>(passengerDestinations);
 		rest.retainAll(intention.keySet());
 		return rest.size();
 	}
 
+	/**
+	 * Remove the reservations for the current pod from the current station.
+	 */
 	private void removeCurrentReservation() {
 		ArrayList<Reservation> toRemove = new ArrayList<>();
 		for(Reservation r : currentStation.getReservations())
@@ -287,14 +310,6 @@ class Pod extends Vehicle {
 			}
 		
 		currentStation.getReservations().removeAll(toRemove);
-	}
-	
-	public TimeWindow getCurrentWindow() {
-		return currentWindow;
-	}
-
-	public void setCurrentWindow(TimeWindow currentWindow) {
-		this.currentWindow = currentWindow;
 	}
 
 	/**
@@ -305,6 +320,7 @@ class Pod extends Vehicle {
 	public void makeReservations(LinkedHashMap<Station, Long> curBest) {
 		ArrayList<Reservation> res = new ArrayList<Reservation>();
 		Reservation prev = null;
+		
 		// Initialize a list of empty reservations per station.
 		for(Entry<Station, Long> e : curBest.entrySet()) {
 			
@@ -322,6 +338,7 @@ class Pod extends Vehicle {
 		
 		prev.setTime(TimeWindow.create(curBest.get(prev.getStation()), curBest.get(prev.getStation()) + END_STATION_TIME));
 		
+		// Send this list to the current station, which will propagate it for the reservations to be filled in.
 		currentStation.receiveReservationAnt(res, false);
 	}
 
@@ -349,7 +366,6 @@ class Pod extends Vehicle {
 	 * @param stations - An arraylist of stations.
 	 */
 	public void receiveExplorationResult(LinkedHashMap<Station,Long> stations) {
-		
 		this.getIntentions().add(stations);
 	}
 
@@ -357,6 +373,14 @@ class Pod extends Vehicle {
 	 * GETTERS AND SETTERS.
 	 */
 	
+	public TimeWindow getCurrentWindow() {
+		return currentWindow;
+	}
+
+	public void setCurrentWindow(TimeWindow currentWindow) {
+		this.currentWindow = currentWindow;
+	}
+
 	public ArrayList<Reservation> getDesire() {
 		return desire;
 	}
@@ -404,5 +428,21 @@ class Pod extends Vehicle {
 	public void setCurrentLoadingDock(LoadingDock currentLoadingDock) {
 		this.currentLoadingDock = currentLoadingDock;
 	}
+	
 
+	public long getLastMove() {
+		return lastMove;
+	}
+
+	public void setLastMove(long lastMove) {
+		this.lastMove = lastMove;
+	}
+
+	public long getLastRefresh() {
+		return lastRefresh;
+	}
+
+	public void setLastRefresh(long lastRefresh) {
+		this.lastRefresh = lastRefresh;
+	}
 }

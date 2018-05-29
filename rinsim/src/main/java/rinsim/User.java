@@ -5,7 +5,7 @@ import com.github.rinde.rinsim.core.model.pdp.ParcelDTO;
 
 public class User extends Parcel{
 	
-		private Station destination;
+	private Station destination;
 	private long deadline;
 
 	public User(ParcelDTO parcelDto, long deadline, Station dest) {

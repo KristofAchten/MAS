@@ -27,10 +27,6 @@ public class PeopleMover {
 	public static final boolean DEBUGGING = false;
 	// Are we currently using the sophisticated task planning algorithm?
 	public static final boolean ADVANCED_PLANNING = false;
-	// The number of pods in the simulation.
-	private static final int NUM_PODS = 3;
-	// The number of loading docks in the road model.
-	private static final int NUM_LOADINGDOCKS = 3;
 	// The number of users at the start of the simulation.
 	private static final int NUM_USERS = 2;
 	// The number of seats per pod.
@@ -44,7 +40,7 @@ public class PeopleMover {
 	// The delivery deadline that we should try to meet for each user.
 	private static final int DELIVERY_DEADLINE = 120000; // 2 minutes
 	
-	//TEMP
+	// The starting positions that contain a loading dock and spawn a pod initially.
 	private static final Point[] startPos = {new Point(0, 0), new Point(7.2, 2.6), new Point(13.7, 7)};
 	
 	private ArrayList<Station> stations = new ArrayList<>();
@@ -72,7 +68,7 @@ public class PeopleMover {
 		final RandomGenerator r = simulator.getRandomGenerator();
 		final RoadModel roadModel = simulator.getModelProvider().getModel(RoadModel.class);
 		
-		// Create a station on every vertex of the graph.
+		// Create a station on every vertex of the graph, except for the loading dock positions.
 		for(Point p : gm.getGraph2().getNodes()) {
 			if(!Arrays.asList(startPos).contains(p)) {
 				Station s = new Station(p);
@@ -81,14 +77,14 @@ public class PeopleMover {
 			}
 		}
 		
-		// Create a set amount of loading docks at random positions.
-		for(int i = 0; i < NUM_LOADINGDOCKS; i++) {
+		// Create a set amount of loading docks at predefined positions (in the startPos array).
+		for(int i = 0; i < startPos.length; i++) {
 			LoadingDock l = new LoadingDock(startPos[i], MAX_CHARGECAPACITY);
 			getLoadingDocks().add(l);
 			simulator.register(l);
 		}
 		
-		// Set the neighbours for each station.
+		// Set the neighbours for each station. Assume that each station has maximally one loading dock as neighbour.
 		for(Connection<?> c : gm.getGraph2().getConnections()) {
 			Station s1 = getStationAtPoint(c.from());
 			Station s2 = getStationAtPoint(c.to());
@@ -112,9 +108,8 @@ public class PeopleMover {
 			addRandomUser(roadModel, r, simulator);
 		}
 		
-		// Spawn in the predefined number of pods at random, but different, locations.
-		for(int i = 0; i < NUM_PODS; i++) {
-			//Point pos = roadModel.getRandomPosition(r);
+		// Spawn in the pods at the predefined locations.
+		for(int i = 0; i < startPos.length; i++) {
 			Point pos = startPos[i];
 			LoadingDock s = getLoadingDockAtPoint(pos);
 			Pod p = new Pod(pos, MAX_PODCAPACITY, s);
@@ -140,7 +135,7 @@ public class PeopleMover {
 					for(RoadSign rs : s.getRoadsigns()) {
 						double str = rs.getStrength();
 						
-						if(str < 0.0001) {
+						if(str < 0.001) {
 							toRemoveRs.add(rs);
 						} else {
 							rs.setStrength(str/2);
@@ -157,7 +152,7 @@ public class PeopleMover {
 					}
 					s.getReservations().removeAll(toRemoveRes);
 					
-					// For each user currently at a station: send out feasability ants pointing towards the current station.
+					// For each user currently at a station: send out feasability ants pointing towards the station that the user is at.
 					if(!s.getPassengers().isEmpty()) {
 						for(int i = 0; i < s.getPassengers().size(); i++) {
 							RoadSign rs = new RoadSign();
@@ -200,7 +195,7 @@ public class PeopleMover {
 	}
 	
 	/**
-	 * Returns the station at a given point in the graph.
+	 * Returns the station at a given point in the graph (if there is one).
 	 * 
 	 * @param p - The point
 	 * @return Station at position p
@@ -213,6 +208,11 @@ public class PeopleMover {
 		return null;
 	}
 	
+	/**
+	 * Returns the loading dock at a given point in the graph (if there is one).
+	 * @param p - The point
+	 * @return LoadingDock at position p
+	 */
 	public LoadingDock getLoadingDockAtPoint(Point p) {
 		for(LoadingDock d : getLoadingDocks())
 			if(d.getPosition().equals(p))
@@ -230,14 +230,15 @@ public class PeopleMover {
 	 */
 	public void addRandomUser(RoadModel roadModel, RandomGenerator r, Simulator simulator) {
 		Point startPosition = roadModel.getRandomPosition(r);
-		while (Arrays.asList(startPos).contains(startPosition)) {
+		
+		// Assure that the user does not spawn on a loadingdock, and that the station where it spawns does not have a pod on it.
+		while (Arrays.asList(startPos).contains(startPosition) || getStationAtPoint(startPosition).getPod() != null) {
 			startPosition = roadModel.getRandomPosition(r);
 		}
 		Station start = (Station) getStationAtPoint(startPosition);
 
-		
+		// Find a random endposition that is different from the starting position and is not a loadingdock.
 		Point endpos = roadModel.getRandomPosition(r);
-		// Find a random endposition that is different from the starting position.
 		while(startPosition.equals(endpos) && Arrays.asList(startPos).contains(endpos))
 			endpos = roadModel.getRandomPosition(r);
 		

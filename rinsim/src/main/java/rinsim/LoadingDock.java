@@ -20,6 +20,12 @@ public class LoadingDock extends Depot {
 		
 	}
 	
+	/**
+	 * Make a reservation (the quickest if there are multiple options) for the pod to leave the loadingdock.
+	 * 
+	 * @param pod
+	 * @return Reservation
+	 */
 	public Reservation leave(Pod pod) {
 		Station bestStation = getNeighbours().get(0);
 		TimeWindow bestTime = bestStation.checkPossibleReservationTime(System.currentTimeMillis());

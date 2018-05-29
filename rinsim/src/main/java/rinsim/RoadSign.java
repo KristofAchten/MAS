@@ -8,6 +8,16 @@ public class RoadSign implements Comparable<RoadSign>{
 
 	public RoadSign() {}
 
+	@Override
+	public int compareTo(RoadSign rs) {
+		if(this.getStrength() > rs.getStrength())
+			return 1;
+		else if(this.getStrength() < rs.getStrength())
+			return -1;
+		else
+			return 0;
+	}
+
 	public double getStrength() {
 		return strength;
 	}
@@ -23,17 +33,7 @@ public class RoadSign implements Comparable<RoadSign>{
 	public void setHops(int hops) {
 		this.hops = hops;
 	}
-
-	@Override
-	public int compareTo(RoadSign rs) {
-		if(this.getStrength() > rs.getStrength())
-			return 1;
-		else if(this.getStrength() < rs.getStrength())
-			return -1;
-		else
-			return 0;
-	}
-
+	
 	public Station getEndStation() {
 		return endStation;
 	}
