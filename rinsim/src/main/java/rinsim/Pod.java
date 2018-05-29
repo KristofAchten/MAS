@@ -210,11 +210,17 @@ class Pod extends Vehicle {
 			if(u.getDestination() == currentStation) {
 				toRemove.add(u);
 				pm.deliver(this, u, time);
+				double delay = u.getDeadline() - System.currentTimeMillis();
+				
+				if(PeopleMover.EXPERIMENTING)
+					if(delay < 0)
+						PeopleMover.getDelays().add(delay);
+					else
+						PeopleMover.setUsersOnTime(PeopleMover.getUsersOnTime() + 1);
+
 				if(PeopleMover.DEBUGGING) {
 					System.out.print("Ik zie een driekwartsbroek... User with destination " + u.getDeliveryLocation() + "has arrived at "
 							+ rm.getPosition(this));
-					if(u.getDeadline() < System.currentTimeMillis())
-						System.out.print(". Unfortunately, he arrived with a delay of " + (System.currentTimeMillis() - u.getDeadline())+"ms.");
 				}
 			}
 		}

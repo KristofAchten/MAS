@@ -25,6 +25,8 @@ public class PeopleMover {
 	
 	// Are we currently debugging? -> will enable informative printouts.
 	public static final boolean DEBUGGING = false;
+	// Show experiment results. Best to not use this together with the DEBUGGING flag enabled because of spam.
+	public static final boolean EXPERIMENTING = false;
 	// Are we currently using the sophisticated task planning algorithm?
 	public static final boolean ADVANCED_PLANNING = false;
 	// The number of users at the start of the simulation.
@@ -45,6 +47,10 @@ public class PeopleMover {
 	
 	private ArrayList<Station> stations = new ArrayList<>();
 	private ArrayList<LoadingDock> loadingDocks = new ArrayList<>();
+	public static int usersOnTime = 0;
+	public static ArrayList<Double> delays = new ArrayList<>();
+	
+	
 	
 	public static void main(String[] args) throws URISyntaxException, IOException {
 		PeopleMover pm = new PeopleMover();
@@ -261,5 +267,17 @@ public class PeopleMover {
 
 	public void setLoadingDocks(ArrayList<LoadingDock> loadingDocks) {
 		this.loadingDocks = loadingDocks;
+	}
+	
+	public static ArrayList<Double> getDelays() {
+		return delays;
+	}
+	
+	public static int getUsersOnTime() {
+		return usersOnTime;
+	}
+
+	public static void setUsersOnTime(int usersOnTime) {
+		PeopleMover.usersOnTime = usersOnTime;
 	}
 }
