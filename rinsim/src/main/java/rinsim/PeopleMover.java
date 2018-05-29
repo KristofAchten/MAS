@@ -26,7 +26,7 @@ public class PeopleMover {
 	// Are we currently debugging? -> will enable informative printouts.
 	public static final boolean DEBUGGING = false;
 	// Show experiment results. Best to not use this together with the DEBUGGING flag enabled because of spam.
-	public static final boolean EXPERIMENTING = false;
+	public static final boolean EXPERIMENTING = true;
 	// Are we currently using the sophisticated task planning algorithm?
 	public static final boolean ADVANCED_PLANNING = false;
 	// The number of users at the start of the simulation.
@@ -36,7 +36,7 @@ public class PeopleMover {
 	// The number of charging spaces per charging dock.
 	private static final int MAX_CHARGECAPACITY = 1; 
 	// The probability of a new user spawning.
-	private static final double SPAWN_RATE = 0.01;
+	private static final double SPAWN_RATE = 0.5;
 	// The maximal number of users on the graph at any time. Can be overridden by NUM_USERS.
 	private static final int MAX_USERS = 5;
 	// The delivery deadline that we should try to meet for each user.

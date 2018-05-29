@@ -109,7 +109,7 @@ class Pod extends Vehicle {
 			
 			// Reset the desire if the pod is retrying because of inactivity.
 			if(System.currentTimeMillis() - getLastMove() > 10000)
-				setDesire(null);
+				getDesire().clear();
 
 			// If a certain threshold is reached, start moving towards a loadingdock.
 			if(getBattery() < BATTERY_THRESHOLD) {
@@ -150,6 +150,8 @@ class Pod extends Vehicle {
 						
 						makeReservations(curBest);
 						improvedRouting = true;
+					} else {
+						return;
 					}
 				} else {				
 					User u = currentStation.getPassengers().get(0);
@@ -210,13 +212,23 @@ class Pod extends Vehicle {
 			if(u.getDestination() == currentStation) {
 				toRemove.add(u);
 				pm.deliver(this, u, time);
-				double delay = u.getDeadline() - System.currentTimeMillis();
 				
-				if(PeopleMover.EXPERIMENTING)
-					if(delay < 0)
+				if(PeopleMover.EXPERIMENTING) {
+					double delay = System.currentTimeMillis() - u.getDeadline();
+					if(delay > 0)
 						PeopleMover.getDelays().add(delay);
 					else
 						PeopleMover.setUsersOnTime(PeopleMover.getUsersOnTime() + 1);
+					
+					System.out.println("Users delivered on time: " + PeopleMover.getUsersOnTime());
+					System.out.println("Users not delivered on time: " + PeopleMover.getDelays().size());
+					
+					double sum = 0;
+					for(double d : PeopleMover.getDelays())
+						sum += d;
+					
+					System.out.println("Average delay: " + sum/PeopleMover.getDelays().size() + "\n");
+				}
 
 				if(PeopleMover.DEBUGGING) {
 					System.out.print("Ik zie een driekwartsbroek... User with destination " + u.getDeliveryLocation() + "has arrived at "
