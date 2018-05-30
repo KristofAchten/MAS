@@ -26,7 +26,7 @@ public class PeopleMover {
 	// Are we currently debugging? -> will enable informative printouts.
 	public static final boolean DEBUGGING = false;
 	// Show experiment results. Best to not use this together with the DEBUGGING flag enabled because of spam.
-	public static final boolean EXPERIMENTING = true;
+	public static final boolean EXPERIMENTING = false;
 	// Are we currently using the sophisticated task planning algorithm?
 	public static final boolean ADVANCED_PLANNING = false;
 	// The number of users at the start of the simulation.
@@ -36,7 +36,7 @@ public class PeopleMover {
 	// The number of charging spaces per charging dock.
 	private static final int MAX_CHARGECAPACITY = 1; 
 	// The probability of a new user spawning.
-	private static final double SPAWN_RATE = 0.5;
+	private static final double SPAWN_RATE = 1;
 	// The maximal number of users on the graph at any time. Can be overridden by NUM_USERS.
 	private static final int MAX_USERS = 5;
 	// The delivery deadline that we should try to meet for each user.
@@ -44,6 +44,9 @@ public class PeopleMover {
 	
 	// The starting positions that contain a loading dock and spawn a pod initially.
 	private static final Point[] startPos = {new Point(0, 0), new Point(7.2, 2.6), new Point(13.7, 7)};
+	
+	//private static final Point[] startPos = {new Point(0, 0)};
+
 	
 	private ArrayList<Station> stations = new ArrayList<>();
 	private ArrayList<LoadingDock> loadingDocks = new ArrayList<>();
@@ -236,7 +239,6 @@ public class PeopleMover {
 	 */
 	public void addRandomUser(RoadModel roadModel, RandomGenerator r, Simulator simulator) {
 		Point startPosition = roadModel.getRandomPosition(r);
-		
 		// Assure that the user does not spawn on a loadingdock, and that the station where it spawns does not have a pod on it.
 		while (Arrays.asList(startPos).contains(startPosition) || getStationAtPoint(startPosition).getPod() != null) {
 			startPosition = roadModel.getRandomPosition(r);
@@ -245,7 +247,7 @@ public class PeopleMover {
 
 		// Find a random endposition that is different from the starting position and is not a loadingdock.
 		Point endpos = roadModel.getRandomPosition(r);
-		while(startPosition.equals(endpos) && Arrays.asList(startPos).contains(endpos))
+		while(startPosition.equals(endpos) ||  Arrays.asList(startPos).contains(endpos))
 			endpos = roadModel.getRandomPosition(r);
 		
 		User u = new User

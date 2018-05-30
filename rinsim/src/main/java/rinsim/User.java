@@ -11,6 +11,8 @@ public class User extends Parcel{
 	public User(ParcelDTO parcelDto, long deadline, Station dest) {
 		super(parcelDto);
 		setDeadline(deadline);
+		if(dest==null)
+			System.out.println(dest);
 		setDestination(dest);
 	}
 	

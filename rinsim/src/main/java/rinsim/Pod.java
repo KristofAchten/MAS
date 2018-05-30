@@ -120,18 +120,9 @@ class Pod extends Vehicle {
 					return;
 				}
 			}
-			
-			// If there are no passengers but there are roadsigns: explore using the most prominent roadsign.
-			else if(currentStation.getPassengers().isEmpty() && !currentStation.getRoadsigns().isEmpty()) {
-				ArrayList<RoadSign> rs = currentStation.getRoadsigns();
-				Collections.sort(rs);
-				dest = rs.get(0).getEndStation();
-				if(PeopleMover.DEBUGGING)
-					System.out.println("Pod "+this+" has sent out exploration ants using the roadsign "+rs.get(0)+" which points to " + dest 
-							+ " at " +dest.getPosition()+".");
 			// Else if there are passengers at the current station: get the one that arrived first and explore to his destination.
 			// Use either the optimized task planning algorithm for this, or the first-come-first-served version.
-			} else if(!currentStation.getPassengers().isEmpty()) {
+			else if(!currentStation.getPassengers().isEmpty()) {
 				if(PeopleMover.ADVANCED_PLANNING) {
 					getIntentions().clear();
 					for(User u : getCurrentStation().getPassengers()) {
@@ -160,8 +151,17 @@ class Pod extends Vehicle {
 						System.out.println("Pod "+this+" has sent out exploration ants using the destination" + dest +" at " + 
 								dest.getPosition() + " of a passenger.");
 				}				
+			}
+			// If there are no passengers but there are roadsigns: explore using the most prominent roadsign.
+			else if(currentStation.getPassengers().isEmpty() && !currentStation.getRoadsigns().isEmpty()) {
+				ArrayList<RoadSign> rs = currentStation.getRoadsigns();
+				Collections.sort(rs);
+				dest = rs.get(0).getEndStation();
+				if(PeopleMover.DEBUGGING)
+					System.out.println("Pod "+this+" has sent out exploration ants using the roadsign "+rs.get(0)+" which points to " + dest 
+							+ " at " +dest.getPosition()+".");
 			// Else: just try to get to a random neighbour and hope there's something to do there.
-			} else {
+			}  else {
 				int n = r.nextInt(currentStation.getNeighbours().size());
 				dest = getCurrentStation().getNeighbours().get(n);
 				if(PeopleMover.DEBUGGING)
@@ -176,7 +176,7 @@ class Pod extends Vehicle {
 			if(dest != currentStation && !improvedRouting) {
 				getIntentions().clear();
 				currentStation.receiveExplorationAnt(new LinkedHashMap<Station,Long>(), dest, START_HOP_COUNT, this);
-				
+		
 				if(!getIntentions().isEmpty()) {
 					LinkedHashMap<Station, Long> curBest = getIntentions().get(0);
 					for(LinkedHashMap<Station, Long> i : getIntentions()) {
@@ -191,7 +191,7 @@ class Pod extends Vehicle {
 							curBest = i;
 						}
 					}
-
+				
 					if(PeopleMover.DEBUGGING) {
 						System.out.print("The best intention is: (");
 						for(Station s: curBest.keySet()) {
@@ -253,7 +253,7 @@ class Pod extends Vehicle {
 			pm.pickup(this, us, time);
 			currentStation.embarkUser(us);
 			if(PeopleMover.DEBUGGING)
-				System.out.println("Picking up " + us + " at " + rm.getPosition(this));
+				System.out.println("Picking up " + us + " at " + rm.getPosition(this) + "amount of users left: "+ getCurrentStation().getPassengers().size());
 		}
 		
 		// If there are no planned moves, and there is a desire: add a move from the desire.
