@@ -101,14 +101,13 @@ public class PeopleMover {
 			LoadingDock d2 = getLoadingDockAtPoint(c.to());
 
 			if(s1 == null) {
-				d1.getNeighbours().add(s2);
-				s2.getLoadingDocks().add(d1);
+				addNeighbour(d1, s2);
+				addLoadingDock(s2, d1);
 			} else if(s2 == null) {
-				d2.getNeighbours().add(s1);
-				s1.getLoadingDocks().add(d2);
-			} else {	
-				s1.getNeighbours().add(s2);
-				s2.getNeighbours().add(s1);
+				addNeighbour(d2, s1);
+				addLoadingDock(s1, d2);
+			} else {					
+				makeNeighbours(s1, s2);
 			}
 		}
 		
@@ -162,7 +161,7 @@ public class PeopleMover {
 					s.getReservations().removeAll(toRemoveRes);
 					
 					// For each user currently at a station: send out feasability ants pointing towards the station that the user is at.
-					if(!s.getPassengers().isEmpty()) {
+					if(!s.getPassengers().isEmpty() && s.getPod() == null) {
 						for(int i = 0; i < s.getPassengers().size(); i++) {
 							RoadSign rs = new RoadSign();
 							rs.setEndStation(s);
@@ -176,6 +175,23 @@ public class PeopleMover {
 		});
 		
 		simulator.start();
+	}
+
+	private void makeNeighbours(Station s1, Station s2) {
+		if(!s1.getNeighbours().contains(s2))
+			s1.getNeighbours().add(s2);	
+		if(!s2.getNeighbours().contains(s1))
+			s2.getNeighbours().add(s1);	
+	}
+
+	private void addLoadingDock(Station s, LoadingDock d) {
+		if(!s.getLoadingDocks().contains(d))
+			s.getLoadingDocks().add(d);
+	}
+
+	private void addNeighbour(LoadingDock d, Station s) {
+		if(!d.getNeighbours().contains(s))
+			d.getNeighbours().add(s);		
 	}
 
 	/**

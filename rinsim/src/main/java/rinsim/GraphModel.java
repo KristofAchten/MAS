@@ -141,7 +141,9 @@ public class GraphModel {
 		g.addConnection(p13, p16);
 		g.addConnection(p13, p17);
 		g.addConnection(p14, p18);
+		g.addConnection(p14, p15);
 		g.addConnection(p15, p16);
+		g.addConnection(p15, p24);
 		g.addConnection(p15, p19);
 		g.addConnection(p15, p20);
 		g.addConnection(p17, p20);
@@ -167,6 +169,7 @@ public class GraphModel {
 		g.addConnection(p29, p30);
 		g.addConnection(p30, p33);
 		g.addConnection(p31, p34);
+		g.addConnection(p33, p29);
 		g.addConnection(p33, p35);
 		g.addConnection(p33, p36);
 		

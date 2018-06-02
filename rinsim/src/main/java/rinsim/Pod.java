@@ -20,7 +20,7 @@ import com.github.rinde.rinsim.util.TimeWindow;
 class Pod extends Vehicle {
 	
 	// Number of hops the exploration ants are maximally going to take before being returned. 
-	private static final int START_HOP_COUNT = 10;
+	private static final int START_HOP_COUNT = 15;
 	// The maximal time left of a reservation before it is refreshed. 
 	private static final int RESERVATION_DIF = 500;
 	// The reservation time at an end station.
@@ -46,6 +46,8 @@ class Pod extends Vehicle {
 	
 	private long lastRefresh = System.currentTimeMillis();
 	private long lastMove = System.currentTimeMillis();
+	
+	private ArrayList<Station> failedDestinations = new ArrayList<>();
 	
 	Random r = new Random();
 	
@@ -156,14 +158,26 @@ class Pod extends Vehicle {
 			else if(currentStation.getPassengers().isEmpty() && !currentStation.getRoadsigns().isEmpty()) {
 				ArrayList<RoadSign> rs = currentStation.getRoadsigns();
 				Collections.sort(rs);
-				dest = rs.get(0).getEndStation();
+				for(RoadSign sign : rs) {
+					if(!getFailedDestinations().contains(sign.getEndStation())) {
+						dest = sign.getEndStation();
+						break;
+					}
+				} 
+				if(dest == null) {
+					dest = getRandomDestination();
+					
+					if(PeopleMover.DEBUGGING)
+						System.out.println("Pod "+this+" has sent out exploration ants to a random neighbour" + dest +" at " + 
+						dest.getPosition() + ". He's currently at " + rm.getPosition(this));
+				}
 				if(PeopleMover.DEBUGGING)
 					System.out.println("Pod "+this+" has sent out exploration ants using the roadsign "+rs.get(0)+" which points to " + dest 
-							+ " at " +dest.getPosition()+".");
+							+ " at " +dest.getPosition()+". He's currently at " + rm.getPosition(this));
 			// Else: just try to get to a random neighbour and hope there's something to do there.
 			}  else {
-				int n = r.nextInt(currentStation.getNeighbours().size());
-				dest = getCurrentStation().getNeighbours().get(n);
+				dest = getRandomDestination();
+				
 				if(PeopleMover.DEBUGGING)
 					System.out.println("Pod "+this+" has sent out exploration ants to a random neighbour" + dest +" at " + 
 							dest.getPosition() + ". He's currently at " + rm.getPosition(this));
@@ -176,8 +190,10 @@ class Pod extends Vehicle {
 			if(dest != currentStation && !improvedRouting) {
 				getIntentions().clear();
 				currentStation.receiveExplorationAnt(new LinkedHashMap<Station,Long>(), dest, START_HOP_COUNT, this);
-		
+				
 				if(!getIntentions().isEmpty()) {
+					getFailedDestinations().clear();
+					
 					LinkedHashMap<Station, Long> curBest = getIntentions().get(0);
 					for(LinkedHashMap<Station, Long> i : getIntentions()) {
 						Iterator<Long> it = i.values().iterator();
@@ -200,7 +216,11 @@ class Pod extends Vehicle {
 						System.out.println("). Making reservations now...");
 					}
 					makeReservations(curBest);
+				} else if (currentStation.getPassengers().isEmpty()){
+					getFailedDestinations().add(dest);
+					return;
 				}
+					
 			}
 			
 			
@@ -386,6 +406,17 @@ class Pod extends Vehicle {
 	public void receiveExplorationResult(LinkedHashMap<Station,Long> stations) {
 		this.getIntentions().add(stations);
 	}
+	
+	private Station getRandomDestination() {
+		
+		int n = r.nextInt(currentStation.getNeighbours().size());
+		Station ret = getCurrentStation().getNeighbours().get(n);
+		while (!getFailedDestinations().containsAll(getCurrentStation().getNeighbours()) && getFailedDestinations().contains(ret)) {
+			n = r.nextInt(currentStation.getNeighbours().size());
+			ret = getCurrentStation().getNeighbours().get(n);
+		}
+		return ret;
+	}
 
 	/**
 	 * GETTERS AND SETTERS.
@@ -462,5 +493,13 @@ class Pod extends Vehicle {
 
 	public void setLastRefresh(long lastRefresh) {
 		this.lastRefresh = lastRefresh;
+	}
+
+	public ArrayList<Station> getFailedDestinations() {
+		return failedDestinations;
+	}
+
+	public void setFailedDestinations(ArrayList<Station> failedDestinations) {
+		this.failedDestinations = failedDestinations;
 	}
 }
