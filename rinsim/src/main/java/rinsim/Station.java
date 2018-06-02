@@ -12,9 +12,9 @@ import com.github.rinde.rinsim.util.TimeWindow;
 public class Station extends Depot {
 	
 	// The time that each reservation should last.
-	public static long RESERVATION_TIME = 120000;
+	public static long RESERVATION_TIME = 100000;
 	// The time between each reservation in the sequence.
-	public static long BUFFER_TIME = 30000;
+	public static long BUFFER_TIME = 10000;
 
 	
 	private ArrayList<Reservation> reservations = new ArrayList<>();

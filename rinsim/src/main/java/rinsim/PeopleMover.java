@@ -46,7 +46,7 @@ public class PeopleMover {
 	// The maximal number of users on the graph at any time. Can be overridden by NUM_USERS.
 	private static final int MAX_USERS = 5;
 	// The delivery deadline that we should try to meet for each user.
-	private static final int DELIVERY_DEADLINE = 120000; // 2 minutes
+	private static final int DELIVERY_DEADLINE = 3600000; // 1 hour
 	
 	// The starting positions that contain a loading dock and spawn a pod initially.
 	private static final Point[] startPos = {new Point(0, 0), new Point(7.2, 2.6), new Point(13.7, 7)};
