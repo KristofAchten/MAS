@@ -110,7 +110,7 @@ class Pod extends Vehicle {
 		if((((currentTime - getLastMove()) > 600000) || (getDesire().isEmpty() && movingQueue.isEmpty())) && (currentTime - getLastRefresh() > 90000)) {
 			Station dest = null;
 			setLastRefresh(currentTime);
-			System.out.println("jappenss");
+			
 			// Reset the desire if the pod is retrying because of inactivity. This for possible deadlock resolution.
 			if(currentTime - getLastMove() > 10000)
 				getDesire().clear();
@@ -237,6 +237,8 @@ class Pod extends Vehicle {
 					
 				// If no intentions had been found and there are no passengers at the current station: add this destination to the failed list.
 				} else if (currentStation.getPassengers().isEmpty()){
+					if(PeopleMover.DEBUGGING) 
+						System.err.println("The pod at " + rm.getPosition(this) + " was unable to find intentions outwards to " + dest.getPosition() +".");
 					getFailedDestinations().add(dest);
 					return;
 				}
