@@ -26,7 +26,7 @@ import com.github.rinde.rinsim.ui.renderers.RoadUserRenderer;
 public class PeopleMover {
 	
 	// Are we currently debugging? -> will enable informative printouts.
-	public static final boolean DEBUGGING = true;
+	public static final boolean DEBUGGING = false;
 	// Show experiment results. Best to not use this together with the DEBUGGING flag enabled because of spam.
 	public static final boolean EXPERIMENTING = false;
 	// Are we currently using the sophisticated task planning algorithm?
@@ -69,7 +69,7 @@ public class PeopleMover {
 		Builder view = createGui();
 
 		final Simulator simulator = Simulator.builder()
-			      .addModel(RoadModelBuilders.staticGraph(gm.getGraph2()))
+			      .addModel(RoadModelBuilders.staticGraph(gm.getGraph()))
 			      .addModel(DefaultPDPModel.builder())
 			      .addModel(view)
 			      .setTimeUnit(SI.MILLI(SI.SECOND))
@@ -79,7 +79,7 @@ public class PeopleMover {
 		final RoadModel roadModel = simulator.getModelProvider().getModel(RoadModel.class);
 		
 		// Create a station on every vertex of the graph, except for the loading dock positions.
-		for(Point p : gm.getGraph2().getNodes()) {
+		for(Point p : gm.getGraph().getNodes()) {
 			if(!Arrays.asList(startPos).contains(p)) {
 				Station s = new Station(p);
 				getStations().add(s);
@@ -95,7 +95,7 @@ public class PeopleMover {
 		}
 		
 		// Set the neighbours for each station. Assume that each station has maximally one loading dock as neighbour.
-		for(Connection<?> c : gm.getGraph2().getConnections()) {
+		for(Connection<?> c : gm.getGraph().getConnections()) {
 			Station s1 = getStationAtPoint(c.from());
 			Station s2 = getStationAtPoint(c.to());
 			LoadingDock d1 = getLoadingDockAtPoint(c.from());
@@ -284,7 +284,7 @@ public class PeopleMover {
 		// Build a user.
 		User u = new User
 				(Parcel.builder (startPosition, endpos)
-				.buildDTO(), System.currentTimeMillis() + DELIVERY_DEADLINE, (Station) getStationAtPoint(endpos));
+				.buildDTO(), simulator.getCurrentTime() + DELIVERY_DEADLINE, (Station) getStationAtPoint(endpos));
 		
 		// Add the new user to the station it spawned in.
 		start.getPassengers().add(u);
