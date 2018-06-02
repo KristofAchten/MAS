@@ -26,7 +26,7 @@ import com.github.rinde.rinsim.ui.renderers.RoadUserRenderer;
 public class PeopleMover {
 	
 	// Are we currently debugging? -> will enable informative printouts.
-	public static final boolean DEBUGGING = false;
+	public static final boolean DEBUGGING = true;
 	// Show experiment results. Best to not use this together with the DEBUGGING flag enabled because of spam.
 	public static final boolean EXPERIMENTING = false;
 	// Are we currently using the sophisticated task planning algorithm?
@@ -154,7 +154,7 @@ public class PeopleMover {
 					// Remove expired reservations
 					ArrayList<Reservation> toRemoveRes = new ArrayList<>();
 					for(Reservation r : s.getReservations()) {
-						if(r.getTime().end() < timeLapse.getTime()) {
+						if(r.getExpirationTime() < timeLapse.getTime() && s.getPod() == null) {
 							toRemoveRes.add(r);
 						}
 					}

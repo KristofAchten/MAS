@@ -7,13 +7,15 @@ public class Reservation {
 	private Station prevStation;
 	private Station station;
 	private TimeWindow time;
+	private long expirationTime;
 	private Pod pod;
 	
-	public Reservation(Station station, Station prevStation, TimeWindow time, Pod pod) {
+	public Reservation(Station station, Station prevStation, TimeWindow time, Pod pod, long expirationTime) {
 		this.setStation(station);
 		this.setPrevStation(prevStation);
 		this.setTime(time);
 		this.setPod(pod);
+		this.setExpirationTime(expirationTime);
 	}
 
 	public Station getStation() {
@@ -46,5 +48,13 @@ public class Reservation {
 
 	public void setPrevStation(Station prevStation) {
 		this.prevStation = prevStation;
+	}
+
+	public long getExpirationTime() {
+		return expirationTime;
+	}
+
+	public void setExpirationTime(long expirationTime) {
+		this.expirationTime = expirationTime;
 	}
 }

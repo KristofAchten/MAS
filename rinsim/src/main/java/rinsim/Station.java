@@ -69,7 +69,7 @@ public class Station extends Depot {
 		// If the ant has arrived, add this station to the list and continue the method.
 		if(this == dest) {
 			long resTime = checkPossibleReservationTime(prevTime + RESERVATION_TIME).begin();
-			if(resTime > 99999999999999L)
+			if(resTime > 9999999999999999L)
 				return;
 			else
 				prev.put(this, resTime);
@@ -125,7 +125,7 @@ public class Station extends Depot {
 	}
 	
 	/**
-	 * Make a reservation, or refresh an existing reservation.
+	 * Make a reservation.
 	 * Refreshing does not always extend the time of the current reservation.
 	 * 
 	 * @param res - A list reservations that already exist. This list is used to iterate through all reservations

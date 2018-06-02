@@ -22,7 +22,7 @@ class Pod extends Vehicle {
 	// Number of hops the exploration ants are maximally going to take before being returned. 
 	private static final int START_HOP_COUNT = 10;
 	// The reservation time at an end station.
-	private static final long END_STATION_TIME = 99999999999999999L;
+	private static final long END_STATION_TIME = 999999999999999999L;
 	// The pod speed.
 	private static final double SPEED = 200d;
 	// The amount a battery gets drained per tick if its moving.
@@ -68,8 +68,15 @@ class Pod extends Vehicle {
 		RoadModel rm = getRoadModel();
 		PDPModel pm = getPDPModel();
 		
-		if(getBattery() <= 0) 
+		if(getBattery() <= 0) { 
 			System.err.println("FAIL: The pod at position " + rm.getPosition(this) + " has run out of juice! :-(");
+			try {
+				wait(5000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			System.exit(1);
+		}
 		
 		// Only move if there is a next hop, our reservation time is respected and the battery is not zero.
 		if(!movingQueue.isEmpty() && currentWindow.isIn(time.getTime()) && getBattery() > 0) {
@@ -169,7 +176,7 @@ class Pod extends Vehicle {
 					User u = currentStation.getPassengers().get(0);
 					dest = u.getDestination();
 					if(PeopleMover.DEBUGGING)
-						System.out.println("Pod "+this+" has sent out exploration ants using the destination" + dest +" at " + 
+						System.out.println("Pod "+this+" has sent out exploration ants using the destination " + dest +" at " + 
 								dest.getPosition() + " of a passenger.");
 				}				
 			}
@@ -203,7 +210,7 @@ class Pod extends Vehicle {
 				dest = getRandomNeighbour();
 				
 				if(PeopleMover.DEBUGGING)
-					System.out.println("Pod "+this+" has sent out exploration ants to a random neighbour" + dest +" at " + 
+					System.out.println("Pod "+this+" has sent out exploration ants to a random neighbour " + dest +" at " + 
 							dest.getPosition() + ". He's currently at " + rm.getPosition(this));
 			}
 
@@ -415,10 +422,11 @@ class Pod extends Vehicle {
 			Reservation r = null;
 			
 			if(prev != null) {
-				r = new Reservation(e.getKey(), prev.getStation(), null, this);
+				r = new Reservation(e.getKey(), prev.getStation(), null, this, 0);
 				prev.setTime(TimeWindow.create(curBest.get(prev.getStation()), e.getValue()));
+				prev.setExpirationTime(e.getValue());
 			} else {
-				r = new Reservation(e.getKey(), null, null, this);
+				r = new Reservation(e.getKey(), null, null, this, 0);
 			}
 			
 			prev = r;
@@ -426,6 +434,7 @@ class Pod extends Vehicle {
 		}
 		
 		prev.setTime(TimeWindow.create(curBest.get(prev.getStation()), curBest.get(prev.getStation()) + END_STATION_TIME));
+		prev.setExpirationTime(curBest.get(prev.getStation()));
 		
 		// Send this list to the current station, which will propagate it for the reservations to be filled in.
 		currentStation.receiveReservationAnt(res);

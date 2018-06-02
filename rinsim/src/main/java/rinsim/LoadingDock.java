@@ -39,7 +39,7 @@ public class LoadingDock extends Depot {
 		}
 		
 		// Make a reservation, and add it to the station.
-		Reservation r = new Reservation(bestStation, null, bestTime, pod);
+		Reservation r = new Reservation(bestStation, null, bestTime, pod, bestTime.end());
 		bestStation.getReservations().add(r);
 		
 		return r;
