@@ -3,7 +3,6 @@ package rinsim;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.Random;
 
 import com.github.rinde.rinsim.core.model.pdp.Depot;
 import com.github.rinde.rinsim.geom.Point;
@@ -24,7 +23,6 @@ public class Station extends Depot {
 	private ArrayList<LoadingDock> loadingDocks = new ArrayList<>();
 	
 	private Pod pod = null;
-	private Random rand = new Random();
 	private Point position;
 
 	public Station(Point position) {
@@ -68,14 +66,14 @@ public class Station extends Depot {
 			prevTime = iterator.next(); 
 		}
 		
-		// If the ant reaches a station at which a pod is waiting: kill the chain.
-		// This is one of the methods that ensures that pods cannot be at the same station at once.
-		if((checkPossibleReservationTime(prevTime + RESERVATION_TIME).begin() - (prevTime + RESERVATION_TIME)) > 999999995)
-			return;
-
 		// If the ant has arrived, add this station to the list and continue the method.
-		if(this == dest)
-			prev.put(this, checkPossibleReservationTime(prevTime + RESERVATION_TIME).begin());
+		if(this == dest) {
+			long resTime = checkPossibleReservationTime(prevTime + RESERVATION_TIME).begin();
+			if(resTime > 99999999999999L)
+				return;
+			else
+				prev.put(this, resTime);
+		}
 
 		// If the ant has arrived or the hop count is set to -1: start returning.
 		if(this == dest || hop == -1) {
@@ -99,8 +97,15 @@ public class Station extends Depot {
 		} else {
 			if(getPod() == pod)
 				prev.put(this, currentTime + RESERVATION_TIME);
-			else
-				prev.put(this, checkPossibleReservationTime(prevTime + RESERVATION_TIME).begin());
+			else {
+				long resTime = checkPossibleReservationTime(prevTime + RESERVATION_TIME).begin();
+				// If the ant reaches a station at which a pod is waiting: kill the chain.
+				// This is one of the methods that ensures that pods cannot be at the same station at once.
+				if(resTime > 99999999999999L)
+					return;
+				else
+					prev.put(this, resTime);
+			}
 			for(Station s : getNeighbours()) {
 				s.receiveExplorationAnt(new LinkedHashMap<Station, Long>(prev), dest, hop - 1, pod, currentTime);
 			}
@@ -215,8 +220,9 @@ public class Station extends Depot {
 
 		// If there are any hops left: forward.
 		if(hops > 0) {
-			int  n = rand.nextInt(getNeighbours().size());
-			getNeighbours().get(n).receiveRoadSignAnt(sign);
+			for(Station s : getNeighbours()){
+				s.receiveRoadSignAnt(sign);
+			}
 		}
 	}
 

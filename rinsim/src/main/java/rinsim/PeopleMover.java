@@ -4,11 +4,8 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
 
-import javax.measure.quantity.Duration;
 import javax.measure.unit.SI;
-import javax.measure.unit.Unit;
 
 import org.apache.commons.math3.random.RandomGenerator;
 
@@ -25,26 +22,25 @@ import com.github.rinde.rinsim.ui.View;
 import com.github.rinde.rinsim.ui.View.Builder;
 import com.github.rinde.rinsim.ui.renderers.GraphRoadModelRenderer;
 import com.github.rinde.rinsim.ui.renderers.RoadUserRenderer;
-import com.sun.jna.platform.win32.WinUser.MSG;
 
 public class PeopleMover {
 	
 	// Are we currently debugging? -> will enable informative printouts.
-	public static final boolean DEBUGGING = true;
+	public static final boolean DEBUGGING = false;
 	// Show experiment results. Best to not use this together with the DEBUGGING flag enabled because of spam.
 	public static final boolean EXPERIMENTING = false;
 	// Are we currently using the sophisticated task planning algorithm?
 	public static final boolean ADVANCED_PLANNING = false;
 	// The number of users at the start of the simulation.
-	private static final int NUM_USERS = 2;
+	private static final int NUM_USERS = 5;
 	// The number of seats per pod.
 	private static final int MAX_PODCAPACITY = 4;
 	// The number of charging spaces per charging dock.
 	private static final int MAX_CHARGECAPACITY = 1; 
 	// The probability of a new user spawning.
-	private static final double SPAWN_RATE = 1;
+	private static final double SPAWN_RATE = 0.2;
 	// The maximal number of users on the graph at any time. Can be overridden by NUM_USERS.
-	private static final int MAX_USERS = 5;
+	private static final int MAX_USERS = 20;
 	// The delivery deadline that we should try to meet for each user.
 	private static final int DELIVERY_DEADLINE = 3600000; // 1 hour
 	

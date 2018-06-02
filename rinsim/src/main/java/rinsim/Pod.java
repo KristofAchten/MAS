@@ -20,17 +20,17 @@ import com.github.rinde.rinsim.util.TimeWindow;
 class Pod extends Vehicle {
 	
 	// Number of hops the exploration ants are maximally going to take before being returned. 
-	private static final int START_HOP_COUNT = 15;
+	private static final int START_HOP_COUNT = 10;
 	// The reservation time at an end station.
-	private static final int END_STATION_TIME = 999999999;
+	private static final long END_STATION_TIME = 99999999999999999L;
 	// The pod speed.
 	private static final double SPEED = 200d;
 	// The amount a battery gets drained per tick if its moving.
-	private static final double BATTERY_DRAIN = 0.1;
+	private static final double BATTERY_DRAIN = 0.01;
 	// The amount a battery gets charged per tick when at a loading dock.
-	private static final double BATTERY_GAIN = 0.5;
+	private static final double BATTERY_GAIN = 0.1;
 	// The threshold  on which the pod will go recharge.
-	private static final double BATTERY_THRESHOLD = 40;
+	private static final double BATTERY_THRESHOLD = 35;
 	
 	
 	// List of reservations for which the pod is currently routing.
@@ -67,6 +67,9 @@ class Pod extends Vehicle {
 		boolean improvedRouting = false;
 		RoadModel rm = getRoadModel();
 		PDPModel pm = getPDPModel();
+		
+		if(getBattery() <= 0) 
+			System.err.println("FAIL: The pod at position " + rm.getPosition(this) + " has run out of juice! :-(");
 		
 		// Only move if there is a next hop, our reservation time is respected and the battery is not zero.
 		if(!movingQueue.isEmpty() && currentWindow.isIn(time.getTime()) && getBattery() > 0) {
@@ -226,8 +229,8 @@ class Pod extends Vehicle {
 					
 					if(PeopleMover.DEBUGGING) {
 						System.out.print("The best intention is: (");
-						for(Station s: curBest.keySet()) {
-							System.out.print(s.getPosition()+ ", ");
+						for(Entry<Station, Long> e: curBest.entrySet()) {
+							System.out.print(e.getKey()+ ", " + e.getValue()+"; ");
 						}
 						System.out.println("). Making reservations now...");
 					}
@@ -256,7 +259,7 @@ class Pod extends Vehicle {
 				pm.deliver(this, u, time);
 				
 				if(PeopleMover.EXPERIMENTING) {
-					double delay = System.currentTimeMillis() - u.getDeadline();
+					double delay = time.getTime() - u.getDeadline();
 					if(delay > 0)
 						PeopleMover.getDelays().add(delay);
 					else
@@ -278,7 +281,10 @@ class Pod extends Vehicle {
 				}
 			}
 		}
-		getPassengers().removeAll(toRemove);
+		if(!toRemove.isEmpty() ) {
+			getPassengers().removeAll(toRemove);
+			return;
+		}
 		
 		// Embark new users, but only if their destination is in the current desire.
 		ArrayList<User> toEmbark = new ArrayList<>();
@@ -306,7 +312,7 @@ class Pod extends Vehicle {
 			
 			if(PeopleMover.DEBUGGING)
 				System.out.println("Added "+r.getStation().getPosition() + " to the movingQueue of Pod " + this +" at " + rm.getPosition(this) + " " + currentStation
-						+ " at " + System.currentTimeMillis());
+						+ " at " + time.getTime());
 			
 			// Set the current fields
 			currentWindow = r.getTime();
@@ -391,7 +397,6 @@ class Pod extends Vehicle {
 			if(r.getPod() == this) {
 				toRemove.add(r);
 			}
-		
 		currentStation.getReservations().removeAll(toRemove);
 	}
 
