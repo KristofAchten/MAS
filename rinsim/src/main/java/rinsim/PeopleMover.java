@@ -4,6 +4,11 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
+
+import javax.measure.quantity.Duration;
+import javax.measure.unit.SI;
+import javax.measure.unit.Unit;
 
 import org.apache.commons.math3.random.RandomGenerator;
 
@@ -20,11 +25,12 @@ import com.github.rinde.rinsim.ui.View;
 import com.github.rinde.rinsim.ui.View.Builder;
 import com.github.rinde.rinsim.ui.renderers.GraphRoadModelRenderer;
 import com.github.rinde.rinsim.ui.renderers.RoadUserRenderer;
+import com.sun.jna.platform.win32.WinUser.MSG;
 
 public class PeopleMover {
 	
 	// Are we currently debugging? -> will enable informative printouts.
-	public static final boolean DEBUGGING = false;
+	public static final boolean DEBUGGING = true;
 	// Show experiment results. Best to not use this together with the DEBUGGING flag enabled because of spam.
 	public static final boolean EXPERIMENTING = false;
 	// Are we currently using the sophisticated task planning algorithm?
@@ -45,9 +51,7 @@ public class PeopleMover {
 	// The starting positions that contain a loading dock and spawn a pod initially.
 	private static final Point[] startPos = {new Point(0, 0), new Point(7.2, 2.6), new Point(13.7, 7)};
 	
-	//private static final Point[] startPos = {new Point(0, 0)};
 
-	
 	private ArrayList<Station> stations = new ArrayList<>();
 	private ArrayList<LoadingDock> loadingDocks = new ArrayList<>();
 	public static int usersOnTime = 0;
@@ -72,6 +76,7 @@ public class PeopleMover {
 			      .addModel(RoadModelBuilders.staticGraph(gm.getGraph2()))
 			      .addModel(DefaultPDPModel.builder())
 			      .addModel(view)
+			      .setTimeUnit(SI.MILLI(SI.SECOND))
 			      .build();
 		
 		final RandomGenerator r = simulator.getRandomGenerator();
@@ -81,7 +86,7 @@ public class PeopleMover {
 		for(Point p : gm.getGraph2().getNodes()) {
 			if(!Arrays.asList(startPos).contains(p)) {
 				Station s = new Station(p);
-				addStation(s);
+				getStations().add(s);
 				simulator.register(s);
 			}
 		}
@@ -116,11 +121,10 @@ public class PeopleMover {
 			addRandomUser(roadModel, r, simulator);
 		}
 		
-		// Spawn in the pods at the predefined locations.
+		// Spawn in the pods at the predefined locations and register them with the loading dock.
 		for(int i = 0; i < startPos.length; i++) {
-			Point pos = startPos[i];
-			LoadingDock s = getLoadingDockAtPoint(pos);
-			Pod p = new Pod(pos, MAX_PODCAPACITY, s);
+			LoadingDock s = getLoadingDockAtPoint(startPos[i]);
+			Pod p = new Pod(startPos[i], MAX_PODCAPACITY, s);
 			s.setPod(p);
 			simulator.register(p);
 		}
@@ -130,14 +134,14 @@ public class PeopleMover {
 			@Override
 			public void tick(TimeLapse timeLapse) {
 				
-				// Spawn a new user (sometimes).
+				// Spawn a new user at a predefined rate, but only when the max number of users has not been reached yet.
 				if(r.nextDouble() < SPAWN_RATE && roadModel.getObjectsOfType(User.class).size() < MAX_USERS) {
 					addRandomUser(roadModel, r, simulator);
 				}
 				
 				// Per station:
 				for(Station s : getStations()) {
-					
+
 					// Update strengths and remove expired roadsigns.
 					ArrayList<RoadSign> toRemoveRs = new ArrayList<>();
 					for(RoadSign rs : s.getRoadsigns()) {
@@ -154,13 +158,13 @@ public class PeopleMover {
 					// Remove expired reservations
 					ArrayList<Reservation> toRemoveRes = new ArrayList<>();
 					for(Reservation r : s.getReservations()) {
-						if(r.getExpirationTime() < System.currentTimeMillis()) {
+						if(r.getTime().end() < timeLapse.getTime()) {
 							toRemoveRes.add(r);
 						}
 					}
 					s.getReservations().removeAll(toRemoveRes);
 					
-					// For each user currently at a station: send out feasability ants pointing towards the station that the user is at.
+					// For each user currently at a station: send out feasibility ants pointing towards the station that the user is at.
 					if(!s.getPassengers().isEmpty() && s.getPod() == null) {
 						for(int i = 0; i < s.getPassengers().size(); i++) {
 							RoadSign rs = new RoadSign();
@@ -177,6 +181,12 @@ public class PeopleMover {
 		simulator.start();
 	}
 
+	/**
+	 * Add two stations to each others neighbour list, but only if they're not already in there.
+	 * 
+	 * @param s1 - Station one
+	 * @param s2 - Station two
+	 */
 	private void makeNeighbours(Station s1, Station s2) {
 		if(!s1.getNeighbours().contains(s2))
 			s1.getNeighbours().add(s2);	
@@ -184,11 +194,23 @@ public class PeopleMover {
 			s2.getNeighbours().add(s1);	
 	}
 
+	/**
+	 * Set the loading dock that's connected to a station, but only if it's not already set.
+	 * 
+	 * @param s - The station
+	 * @param d - The loading dock
+	 */
 	private void addLoadingDock(Station s, LoadingDock d) {
 		if(!s.getLoadingDocks().contains(d))
 			s.getLoadingDocks().add(d);
 	}
 
+	/**
+	 * Add a neighbour to the list of neighbours in a loading dock, but only if it's not already in there.
+	 * 
+	 * @param d
+	 * @param s
+	 */
 	private void addNeighbour(LoadingDock d, Station s) {
 		if(!d.getNeighbours().contains(s))
 			d.getNeighbours().add(s);		
@@ -207,17 +229,10 @@ public class PeopleMover {
 		    		  .withImageAssociation(Pod.class, "/graphics/flat/taxi-32.png")
 		    		  .withImageAssociation(Station.class, "/graphics/flat/bus-stop-icon-32.png")
 		    		  .withImageAssociation(LoadingDock.class, "/graphics/perspective/tall-building-64.png"))
+		      //.withFullScreen()
 		      .withTitleAppendix("People Mover 2000");
 		    return view;
 		  }
-
-	public ArrayList<Station> getStations() {
-		return stations;
-	}
-
-	public void addStation(Station station) {
-		this.stations.add(station);
-	}
 	
 	/**
 	 * Returns the station at a given point in the graph (if there is one).
@@ -235,6 +250,7 @@ public class PeopleMover {
 	
 	/**
 	 * Returns the loading dock at a given point in the graph (if there is one).
+	 * 
 	 * @param p - The point
 	 * @return LoadingDock at position p
 	 */
@@ -254,18 +270,22 @@ public class PeopleMover {
 	 * @param simulator - The specific simulation instance
 	 */
 	public void addRandomUser(RoadModel roadModel, RandomGenerator r, Simulator simulator) {
+		
+		// Get a random startposition on the graph.
 		Point startPosition = roadModel.getRandomPosition(r);
+		
 		// Assure that the user does not spawn on a loadingdock, and that the station where it spawns does not have a pod on it.
-		while (Arrays.asList(startPos).contains(startPosition) || getStationAtPoint(startPosition).getPod() != null) {
+		while (Arrays.asList(startPos).contains(startPosition) || getStationAtPoint(startPosition).getPod() != null)
 			startPosition = roadModel.getRandomPosition(r);
-		}
-		Station start = (Station) getStationAtPoint(startPosition);
+		
+		Station start = getStationAtPoint(startPosition);
 
 		// Find a random endposition that is different from the starting position and is not a loadingdock.
 		Point endpos = roadModel.getRandomPosition(r);
 		while(startPosition.equals(endpos) ||  Arrays.asList(startPos).contains(endpos))
 			endpos = roadModel.getRandomPosition(r);
 		
+		// Build a user.
 		User u = new User
 				(Parcel.builder (startPosition, endpos)
 				.buildDTO(), System.currentTimeMillis() + DELIVERY_DEADLINE, (Station) getStationAtPoint(endpos));
@@ -276,9 +296,14 @@ public class PeopleMover {
 		if(DEBUGGING)
 			System.out.println("Added a user to station "+start+" at position "+startPosition+". His destination is the station at position "+endpos);
 		
+		// Register the user within the simulator.
 		simulator.register(u);
 	}
 
+	/**
+	 * Getters and setters
+	 */
+	
 	public ArrayList<LoadingDock> getLoadingDocks() {
 		return loadingDocks;
 	}
@@ -297,5 +322,9 @@ public class PeopleMover {
 
 	public static void setUsersOnTime(int usersOnTime) {
 		PeopleMover.usersOnTime = usersOnTime;
+	}
+	
+	public ArrayList<Station> getStations() {
+		return stations;
 	}
 }

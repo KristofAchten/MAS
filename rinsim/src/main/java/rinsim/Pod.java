@@ -21,8 +21,6 @@ class Pod extends Vehicle {
 	
 	// Number of hops the exploration ants are maximally going to take before being returned. 
 	private static final int START_HOP_COUNT = 15;
-	// The maximal time left of a reservation before it is refreshed. 
-	private static final int RESERVATION_DIF = 500;
 	// The reservation time at an end station.
 	private static final int END_STATION_TIME = 999999999;
 	// The pod speed.
@@ -34,21 +32,24 @@ class Pod extends Vehicle {
 	// The threshold  on which the pod will go recharge.
 	private static final double BATTERY_THRESHOLD = 40;
 	
-	private ArrayList<Reservation> desire = new ArrayList<>();
-	private ArrayList<LinkedHashMap<Station, Long>> intentions = new ArrayList<LinkedHashMap<Station, Long>>();
-	private ArrayList<User> passengers = new ArrayList<>();
-	private double battery = 100;
 	
+	// List of reservations for which the pod is currently routing.
+	private ArrayList<Reservation> desire = new ArrayList<>();
+	// List of Maps that show each earliest reservation time per station. This is used to determine the desire (cfr BDI model)
+	private ArrayList<LinkedHashMap<Station, Long>> intentions = new ArrayList<LinkedHashMap<Station, Long>>(); private ArrayList<User> passengers = new ArrayList<>();
+	// List of destinations that have been tried, but for which no suitable route was found or the destination is unavailable.
+	private ArrayList<Station> failedDestinations = new ArrayList<>();
+	
+	
+	private double battery = 100;
 	private Station currentStation; 
 	private LoadingDock currentLoadingDock;
 	private Queue<Point> movingQueue = new LinkedList<Point>();
 	private TimeWindow currentWindow = null;
 	
-	private long lastRefresh = System.currentTimeMillis();
-	private long lastMove = System.currentTimeMillis();
-	
-	private ArrayList<Station> failedDestinations = new ArrayList<>();
-	
+	private long lastRefresh = 0;
+	private long lastMove = 0;
+		
 	Random r = new Random();
 	
 	
@@ -67,10 +68,10 @@ class Pod extends Vehicle {
 		RoadModel rm = getRoadModel();
 		PDPModel pm = getPDPModel();
 		
-		// Only move if there is a next hop and our reservation time is respected, and the battery is not zero.
-		if(!movingQueue.isEmpty() && currentWindow.isIn(System.currentTimeMillis()) && getBattery() > 0) {
+		// Only move if there is a next hop, our reservation time is respected and the battery is not zero.
+		if(!movingQueue.isEmpty() && currentWindow.isIn(time.getTime()) && getBattery() > 0) {
 			rm.followPath(this, movingQueue, time);
-			setLastMove(System.currentTimeMillis());
+			setLastMove(time.getTime());
 			setBattery(getBattery() - BATTERY_DRAIN);
 		}
 		
@@ -96,21 +97,22 @@ class Pod extends Vehicle {
 		if(getCurrentLoadingDock() != null) {
 			setBattery(getBattery() + BATTERY_GAIN);
 			if(getBattery() >= 100 && movingQueue.isEmpty()) {
-				Reservation r = getCurrentLoadingDock().leave(this);
+				Reservation r = getCurrentLoadingDock().leave(this, time);
 				currentWindow = r.getTime();
 				movingQueue.add(r.getStation().getPosition());			
 			}
 			return;
 		}	
-			
-		// If no desire is active and we're done moving, or the pod has been inactive for 10 seconds: send out exploration ants using roadsign info
+		// If no desire is active and we're done moving, or the pod has been inactive for 5 minutes: send out exploration ants using roadsign info
 		// Only do this each 1.5s instead of every tick for performance.
-		if((((System.currentTimeMillis() - getLastMove()) > 10000) || (getDesire().isEmpty() && movingQueue.isEmpty())) && (System.currentTimeMillis() - getLastRefresh() > 1500)) {
+		
+		long currentTime = time.getTime();
+		if((((currentTime - getLastMove()) > 600000) || (getDesire().isEmpty() && movingQueue.isEmpty())) && (currentTime - getLastRefresh() > 90000)) {
 			Station dest = null;
-			setLastRefresh(System.currentTimeMillis());
-			
-			// Reset the desire if the pod is retrying because of inactivity.
-			if(System.currentTimeMillis() - getLastMove() > 10000)
+			setLastRefresh(currentTime);
+			System.out.println("jappenss");
+			// Reset the desire if the pod is retrying because of inactivity. This for possible deadlock resolution.
+			if(currentTime - getLastMove() > 10000)
 				getDesire().clear();
 
 			// If a certain threshold is reached, start moving towards a loadingdock.
@@ -122,15 +124,22 @@ class Pod extends Vehicle {
 					return;
 				}
 			}
+			
 			// Else if there are passengers at the current station: get the one that arrived first and explore to his destination.
-			// Use either the optimized task planning algorithm for this, or the first-come-first-served version.
 			else if(!currentStation.getPassengers().isEmpty()) {
+				
+				// If we're using the optimized task planning:
 				if(PeopleMover.ADVANCED_PLANNING) {
+					
+					// Clear the current list of intentions (these are outdated).
 					getIntentions().clear();
-					for(User u : getCurrentStation().getPassengers()) {
-						currentStation.receiveExplorationAnt(new LinkedHashMap<Station,Long>(), u.getDestination(), START_HOP_COUNT, this);
-					}
-					LinkedHashMap<Station, Long> curBest = findBestRouteAdvanced();
+					
+					// Send out exploration ants for each passenger at the current station.
+					for(User u : getCurrentStation().getPassengers())
+						currentStation.receiveExplorationAnt(new LinkedHashMap<Station,Long>(), u.getDestination(), START_HOP_COUNT, this, time.getTime());
+					
+					// Find the best route out of the newly found intentions.
+					LinkedHashMap<Station, Long> curBest = findBestIntentionAdvanced();
 					
 					if(curBest != null) {
 						if(PeopleMover.DEBUGGING) {
@@ -141,12 +150,19 @@ class Pod extends Vehicle {
 							System.out.println("). Making reservations now...");
 						}
 						
+						// Make it the desire, and let the remainder of this method know that we've already done this.
 						makeReservations(curBest);
 						improvedRouting = true;
 					} else {
+						// If no intentions were found because of destination unavailability: return
+						if(PeopleMover.DEBUGGING) 
+							System.err.println("The pod at " + rm.getPosition(this) + " was unable to find intentions using the destination of the passengers"
+									+ " at the station.");
+						
 						return;
 					}
-				} else {				
+				// If we're using the FCFS task planning:	
+				} else {
 					User u = currentStation.getPassengers().get(0);
 					dest = u.getDestination();
 					if(PeopleMover.DEBUGGING)
@@ -158,56 +174,56 @@ class Pod extends Vehicle {
 			else if(currentStation.getPassengers().isEmpty() && !currentStation.getRoadsigns().isEmpty()) {
 				ArrayList<RoadSign> rs = currentStation.getRoadsigns();
 				Collections.sort(rs);
+				
+				// Select the most prominent roadsign that has not yet lead to finding no intentions (if such roadsign exists).
 				for(RoadSign sign : rs) {
 					if(!getFailedDestinations().contains(sign.getEndStation())) {
 						dest = sign.getEndStation();
 						break;
 					}
 				} 
+				
+				// If no such roadsign was found, pick a random neighbour to resolve deadlock.
 				if(dest == null) {
-					dest = getRandomDestination();
+					dest = getRandomNeighbour();
 					
 					if(PeopleMover.DEBUGGING)
-						System.out.println("Pod "+this+" has sent out exploration ants to a random neighbour" + dest +" at " + 
-						dest.getPosition() + ". He's currently at " + rm.getPosition(this));
+						System.out.println("Pod at location " + rm.getPosition(this) + " tried to follow a roadsign, but was unable to. It's now routing towards "
+								 + dest +" at " + dest.getPosition() + ".");
 				}
+				
 				if(PeopleMover.DEBUGGING)
 					System.out.println("Pod "+this+" has sent out exploration ants using the roadsign "+rs.get(0)+" which points to " + dest 
 							+ " at " +dest.getPosition()+". He's currently at " + rm.getPosition(this));
 			// Else: just try to get to a random neighbour and hope there's something to do there.
 			}  else {
-				dest = getRandomDestination();
+				dest = getRandomNeighbour();
 				
 				if(PeopleMover.DEBUGGING)
 					System.out.println("Pod "+this+" has sent out exploration ants to a random neighbour" + dest +" at " + 
 							dest.getPosition() + ". He's currently at " + rm.getPosition(this));
 			}
-			
-			
 
-			// Send out the ants, fetch the intentions to the destination and make the shortest one in size the desire of this pod.
+			
+			// Send out the ants to the destination selected above, fetch the intentions to the destination and 
+			// make the shortest one in size the desire of this pod.
 			// Only do this when the improved task planning hasn't been used this tick.
 			if(dest != currentStation && !improvedRouting) {
-				getIntentions().clear();
-				currentStation.receiveExplorationAnt(new LinkedHashMap<Station,Long>(), dest, START_HOP_COUNT, this);
 				
+				// Clear the current intentions, and provide the ant to the first station (the one this pod is currently on).
+				// This will process, and fill up the intentions.
+				getIntentions().clear();
+				currentStation.receiveExplorationAnt(new LinkedHashMap<Station,Long>(), dest, START_HOP_COUNT, this, time.getTime());
+				
+				// If atleast one intention has been found:
 				if(!getIntentions().isEmpty()) {
+					
+					// Reset the list of failed destinations, as we're now moving...
 					getFailedDestinations().clear();
 					
-					LinkedHashMap<Station, Long> curBest = getIntentions().get(0);
-					for(LinkedHashMap<Station, Long> i : getIntentions()) {
-						Iterator<Long> it = i.values().iterator();
-						Long val = it.next();
-						while(it.hasNext()) {val = it.next();}
-						
-						it = curBest.values().iterator();
-						Long bestVal = it.next();
-						while(it.hasNext()) {bestVal = it.next();}
-						if(val < bestVal) {
-							curBest = i;
-						}
-					}
-				
+					// Find the best intention.
+					LinkedHashMap<Station, Long> curBest = findBestIntentionBasic();
+					
 					if(PeopleMover.DEBUGGING) {
 						System.out.print("The best intention is: (");
 						for(Station s: curBest.keySet()) {
@@ -215,7 +231,11 @@ class Pod extends Vehicle {
 						}
 						System.out.println("). Making reservations now...");
 					}
+					
+					// Make reservations for the best intention.
 					makeReservations(curBest);
+					
+				// If no intentions had been found and there are no passengers at the current station: add this destination to the failed list.
 				} else if (currentStation.getPassengers().isEmpty()){
 					getFailedDestinations().add(dest);
 					return;
@@ -278,11 +298,6 @@ class Pod extends Vehicle {
 		
 		// If there are no planned moves, and there is a desire: add a move from the desire.
 		if(movingQueue.isEmpty() && !getDesire().isEmpty()) {
-			
-			// If the reservation for the next hop is closer than RESERVATION_DIF away, refresh everything!
-			if(getDesire().get(0).getTime().end() < System.currentTimeMillis() + RESERVATION_DIF) {
-				refreshReservations();
-			} 
 
 			// Pop the highest point in the sequence.
 			Reservation r = getDesire().remove(0);
@@ -302,7 +317,7 @@ class Pod extends Vehicle {
 	 * 
 	 * @return LinkedHashMap<Station, Long> = stations and earliest possible reservation start times for that station.
 	 */
-	private LinkedHashMap<Station, Long> findBestRouteAdvanced() {
+	private LinkedHashMap<Station, Long> findBestIntentionAdvanced() {
 		LinkedHashMap<Station, Long> best = null;
 		int bestNumPass = 0;
 		ArrayList<Station> passengerDestinations = new ArrayList<>();
@@ -322,6 +337,34 @@ class Pod extends Vehicle {
 			
 		}
 		return best;
+	}
+	
+	/**
+	 * Find the quickest route that can take the user that arrived first in the current station.
+	 * 
+	 * @return LinkedHashMap<Station, Long> = stations and earliest possible reservation start times for that station.
+	 */
+	private LinkedHashMap<Station, Long> findBestIntentionBasic() {
+		
+		LinkedHashMap<Station, Long> curBest = new LinkedHashMap<>();
+		long BestTime = Long.MAX_VALUE;
+		
+		// For each intention...
+		for(LinkedHashMap<Station, Long> i : getIntentions()) {
+			// Iterate through the intention to get the latest reservation time.
+			Iterator<Long> it = i.values().iterator();
+			long time = it.next();
+			while(it.hasNext()) 
+				time = it.next();
+			
+			// If this reservation time is better than the current one, update the results.
+			if(time < BestTime) {
+				BestTime = time;
+				curBest = i;
+			}
+		}
+		
+		return curBest;
 	}
 
 	/**
@@ -359,15 +402,16 @@ class Pod extends Vehicle {
 		ArrayList<Reservation> res = new ArrayList<Reservation>();
 		Reservation prev = null;
 		
-		// Initialize a list of empty reservations per station.
+		// Initialize a list of empty reservations per station to be passed on and filled in.
 		for(Entry<Station, Long> e : curBest.entrySet()) {
 			
 			Reservation r = null;
+			
 			if(prev != null) {
-				r = new Reservation(e.getKey(), prev.getStation(), null, 0, this);
+				r = new Reservation(e.getKey(), prev.getStation(), null, this);
 				prev.setTime(TimeWindow.create(curBest.get(prev.getStation()), e.getValue()));
 			} else {
-				r = new Reservation(e.getKey(), null, null, 0, this);
+				r = new Reservation(e.getKey(), null, null, this);
 			}
 			
 			prev = r;
@@ -377,7 +421,7 @@ class Pod extends Vehicle {
 		prev.setTime(TimeWindow.create(curBest.get(prev.getStation()), curBest.get(prev.getStation()) + END_STATION_TIME));
 		
 		// Send this list to the current station, which will propagate it for the reservations to be filled in.
-		currentStation.receiveReservationAnt(res, false);
+		currentStation.receiveReservationAnt(res);
 	}
 
 	/**
@@ -391,14 +435,6 @@ class Pod extends Vehicle {
 	}
 	
 	/**
-	 * Refresh the current reservations that are part of the desire.
-	 */
-	public void refreshReservations() {
-		getDesire().add(0, new Reservation(currentStation, null, currentWindow, 0, this));
-		currentStation.receiveReservationAnt(getDesire(), true);
-	}
-	
-	/**
 	 * Add any of the exploration results to the intentions list.
 	 * 
 	 * @param stations - An arraylist of stations.
@@ -407,14 +443,25 @@ class Pod extends Vehicle {
 		this.getIntentions().add(stations);
 	}
 	
-	private Station getRandomDestination() {
-		
+	/**
+	 * Pick a random neighbour that is not in the failed stations list.
+	 * 
+	 * @return Station neighbour
+	 */
+	private Station getRandomNeighbour() {
 		int n = r.nextInt(currentStation.getNeighbours().size());
 		Station ret = getCurrentStation().getNeighbours().get(n);
-		while (!getFailedDestinations().containsAll(getCurrentStation().getNeighbours()) && getFailedDestinations().contains(ret)) {
+		
+		// If all neighbours have been tried before: reset the list so they can be tried again.
+		if(getFailedDestinations().containsAll(getCurrentStation().getNeighbours()))
+			getFailedDestinations().clear();
+		
+		// Keep searching until a neighbour has been found that is not in the list.
+		while (getFailedDestinations().contains(ret)) {
 			n = r.nextInt(currentStation.getNeighbours().size());
 			ret = getCurrentStation().getNeighbours().get(n);
 		}
+		
 		return ret;
 	}
 
@@ -478,7 +525,6 @@ class Pod extends Vehicle {
 		this.currentLoadingDock = currentLoadingDock;
 	}
 	
-
 	public long getLastMove() {
 		return lastMove;
 	}

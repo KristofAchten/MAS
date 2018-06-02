@@ -3,6 +3,7 @@ package rinsim;
 import java.util.ArrayList;
 
 import com.github.rinde.rinsim.core.model.pdp.Depot;
+import com.github.rinde.rinsim.core.model.time.TimeLapse;
 import com.github.rinde.rinsim.geom.Point;
 import com.github.rinde.rinsim.util.TimeWindow;
 
@@ -26,23 +27,28 @@ public class LoadingDock extends Depot {
 	 * @param pod
 	 * @return Reservation
 	 */
-	public Reservation leave(Pod pod) {
+	public Reservation leave(Pod pod, TimeLapse time) {
 		Station bestStation = getNeighbours().get(0);
-		TimeWindow bestTime = bestStation.checkPossibleReservationTime(System.currentTimeMillis());
+		TimeWindow bestTime = bestStation.checkPossibleReservationTime(time.getTime());
 		
+		// Determine which neighbour is the quickest getaway.
 		for(Station s : getNeighbours()) {
-			if(s.checkPossibleReservationTime(System.currentTimeMillis()).begin() < bestTime.begin())
-				bestTime = s.checkPossibleReservationTime(System.currentTimeMillis());
+			if(s.checkPossibleReservationTime(time.getTime()).begin() < bestTime.begin())
+				bestTime = s.checkPossibleReservationTime(time.getTime());
 				bestStation = s;
 		}
 		
-		Reservation r = new Reservation(bestStation, null, bestTime, 999999999, pod);
-		
+		// Make a reservation, and add it to the station.
+		Reservation r = new Reservation(bestStation, null, bestTime, pod);
 		bestStation.getReservations().add(r);
 		
 		return r;
 	}
 
+	/**
+	 * Getters and setters
+	 */
+	
 	public ArrayList<Station> getNeighbours() {
 		return neighbours;
 	}

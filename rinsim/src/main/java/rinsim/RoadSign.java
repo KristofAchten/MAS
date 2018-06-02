@@ -18,6 +18,10 @@ public class RoadSign implements Comparable<RoadSign>{
 			return 0;
 	}
 
+	/**
+	 * Getters and setters.
+	 */
+	
 	public double getStrength() {
 		return strength;
 	}

@@ -9,7 +9,7 @@ import com.github.rinde.rinsim.geom.TableGraph;
 public class GraphModel {
 	
 	public GraphModel() {};
-	
+
 	public Graph<ConnectionData> getGraph1() {
 		Point p1 = new Point(0, 2);
 		Point p2 = new Point(5, 3);

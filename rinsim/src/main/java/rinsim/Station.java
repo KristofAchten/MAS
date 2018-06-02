@@ -12,11 +12,9 @@ import com.github.rinde.rinsim.util.TimeWindow;
 public class Station extends Depot {
 	
 	// The time that each reservation should last.
-	public static long RESERVATION_TIME = 3500;
-	// The time after which a reservation will expire.
-	public static long EXPIRATION_TIME = 500000000;
+	public static long RESERVATION_TIME = 120000;
 	// The time between each reservation in the sequence.
-	public static long BUFFER_TIME = 1000;
+	public static long BUFFER_TIME = 30000;
 
 	
 	private ArrayList<Reservation> reservations = new ArrayList<>();
@@ -24,6 +22,7 @@ public class Station extends Depot {
 	private ArrayList<Station> neighbours = new ArrayList<>();
 	private ArrayList<User> passengers = new ArrayList<>();
 	private ArrayList<LoadingDock> loadingDocks = new ArrayList<>();
+	
 	private Pod pod = null;
 	private Random rand = new Random();
 	private Point position;
@@ -35,11 +34,11 @@ public class Station extends Depot {
 	}
 	
 	// Process all incoming ants.
-	public void receiveExplorationAnt(LinkedHashMap<Station,Long> prev, Station dest, int hop, Pod pod) {
-		forwardExploration(prev, dest, hop, pod);
+	public void receiveExplorationAnt(LinkedHashMap<Station,Long> prev, Station dest, int hop, Pod pod, long time) {
+		forwardExploration(prev, dest, hop, pod, time);
 	}
-	public void receiveReservationAnt(ArrayList<Reservation> res, boolean refreshing) {
-		makeReservation(res, refreshing);
+	public void receiveReservationAnt(ArrayList<Reservation> res) {
+		makeReservation(res);
 	}
 	public void receiveRoadSignAnt(RoadSign prev) {
 		makeRoadsign(prev);
@@ -55,7 +54,7 @@ public class Station extends Depot {
 	 * @param dest - The destination Station. If this is null, the pod is trying to route to a loadingdock.
 	 * @param hop - The current hop-count. -1 indicates that the returning process is ongoing.
 	 */
-	private void forwardExploration(LinkedHashMap<Station,Long> prev, Station dest, int hop, Pod pod) {
+	private void forwardExploration(LinkedHashMap<Station,Long> prev, Station dest, int hop, Pod pod, long currentTime) {
 		if(dest == null && !getLoadingDocks().isEmpty())
 			dest = this;
 		
@@ -63,7 +62,7 @@ public class Station extends Depot {
 		if((hop == 0 && this != dest) || (prev.keySet().contains(this) && hop != -1))
 			return;
 		
-		long prevTime = System.currentTimeMillis();
+		long prevTime = currentTime;
 		Iterator<Long> iterator = prev.values().iterator();
 		while (iterator.hasNext()) { 
 			prevTime = iterator.next(); 
@@ -94,16 +93,16 @@ public class Station extends Depot {
 				prevStation = curStation;
 				curStation = it.next();
 			}
-			prevStation.receiveExplorationAnt(new LinkedHashMap<Station, Long>(prev), dest, -1, pod);
+			prevStation.receiveExplorationAnt(new LinkedHashMap<Station, Long>(prev), dest, -1, pod, currentTime);
 		
 		// Else: Add this station and forward to each neighbour a copy of the current list (to avoid concurrent modifications).	
 		} else {
 			if(getPod() == pod)
-				prev.put(this, System.currentTimeMillis() + RESERVATION_TIME);
+				prev.put(this, currentTime + RESERVATION_TIME);
 			else
 				prev.put(this, checkPossibleReservationTime(prevTime + RESERVATION_TIME).begin());
 			for(Station s : getNeighbours()) {
-				s.receiveExplorationAnt(new LinkedHashMap<Station, Long>(prev), dest, hop - 1, pod);
+				s.receiveExplorationAnt(new LinkedHashMap<Station, Long>(prev), dest, hop - 1, pod, currentTime);
 			}
 		}
 	}
@@ -115,9 +114,9 @@ public class Station extends Depot {
 	 * @param preferredTime - The preferred time a next reservation should be made.
 	 * @param refreshing - Indicates whether or not a new reservation is being made, or a current one is being refreshed
 	 */
-	public void sendReservationAnt(ArrayList<Reservation> res, long preferredTime, boolean refreshing) {
+	public void sendReservationAnt(ArrayList<Reservation> res, long preferredTime) {
 		Station receiver = res.get(0).getStation();
-		receiver.receiveReservationAnt(res, refreshing);
+		receiver.receiveReservationAnt(res);
 	}
 	
 	/**
@@ -128,22 +127,10 @@ public class Station extends Depot {
 	 * @param preferredTime - The preferred time a reservation should be made
 	 * @param refreshing - Indicates whether or not a new reservation is being made, or a current one is being refreshed
 	 */
-	private void makeReservation(ArrayList<Reservation> res, boolean refreshing) {
+	private void makeReservation(ArrayList<Reservation> res) {
 		Reservation current = res.remove(0);		
-		
-		// When refreshing: find the current reservation and remove it first.
-		if(refreshing) {
-			Reservation toRemove = null;
-			for(Reservation r: reservations) {
-				if(r.getPod() == current.getPod())
-					toRemove = r;
-					break;
-			}
-			reservations.remove(toRemove);
-		}
 
 		getReservations().add(current);
-		current.setExpirationTime(System.currentTimeMillis() + EXPIRATION_TIME);
 		if(PeopleMover.DEBUGGING)
 			System.out.println("Made a reservation for pod " + current.getPod() + " with timewindow " + current.getTime() + ".\n"
 					+ "Number of reservations for this station at " + this.getPosition() +": "+ this.getReservations().size());
@@ -164,7 +151,7 @@ public class Station extends Depot {
 			}
 		// Forward this ant.	
 		} else {
-			sendReservationAnt(res, current.getTime().begin() + BUFFER_TIME, refreshing);	
+			sendReservationAnt(res, current.getTime().begin() + BUFFER_TIME);	
 		}
 	}
 	
