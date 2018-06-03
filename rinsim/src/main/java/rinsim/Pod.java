@@ -26,7 +26,7 @@ class Pod extends Vehicle {
 	// The pod speed.
 	private static final double SPEED = 200d;
 	// The amount a battery gets drained per tick if its moving.
-	private static final double BATTERY_DRAIN = 0.01;
+	private static final double BATTERY_DRAIN = 1;
 	// The amount a battery gets charged per tick when at a loading dock.
 	private static final double BATTERY_GAIN = 0.1;
 	// The threshold  on which the pod will go recharge.
@@ -70,11 +70,6 @@ class Pod extends Vehicle {
 		
 		if(getBattery() <= 0) { 
 			System.err.println("FAIL: The pod at position " + rm.getPosition(this) + " has run out of juice! :-(");
-			try {
-				wait(5000);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
 			System.exit(1);
 		}
 		
