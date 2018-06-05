@@ -16,6 +16,8 @@ Research questions:
 	VARIABLES:	- INDEPENDENT: User arrival rate {DOUBLE: 0 - 1 / tick}, Task planning algorithm {METHOD: FCFS, Sophisticated}
 			- DEPENDENT: Number of timely deliveries, delay.
 			- Number of pods, Number of loading-docks, graph model, speed, reservation timings
+
+Settings: Max 30 users, 20 ig. time experiment duration, spawn rate: 0.001 - 0.05, steps: 0.005
 			
 
 	

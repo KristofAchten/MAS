@@ -38,9 +38,9 @@ public class PeopleMover {
 	// The number of charging spaces per charging dock.
 	private static final int MAX_CHARGECAPACITY = 1; 
 	// The probability of a new user spawning.
-	private static final double SPAWN_RATE = 0.2;
+	private static final double SPAWN_RATE = 0.05;
 	// The maximal number of users on the graph at any time. Can be overridden by NUM_USERS.
-	private static final int MAX_USERS = 20;
+	private static final int MAX_USERS = 30;
 	// The delivery deadline that we should try to meet for each user.
 	private static final int DELIVERY_DEADLINE = 3600000; // 1 hour
 	
@@ -124,7 +124,7 @@ public class PeopleMover {
 			s.setPod(p);
 			simulator.register(p);
 		}
-		
+				
 		// Handle ticks
 		simulator.addTickListener(new TickListener() {
 			@Override
@@ -217,7 +217,7 @@ public class PeopleMover {
 	 * 
 	 * @return The builder-instance used to create the GUI.
 	 */
-	 public static View.Builder createGui() {
+	 private static View.Builder createGui() {
 		    View.Builder view = View.builder()
 		      .with(GraphRoadModelRenderer.builder())
 		      .with(RoadUserRenderer.builder()		      
@@ -236,7 +236,7 @@ public class PeopleMover {
 	 * @param p - The point
 	 * @return Station at position p
 	 */
-	public Station getStationAtPoint(Point p) {
+	private Station getStationAtPoint(Point p) {
 		for(Station s : getStations()) 	
 			if(s.getPosition().equals(p)) 
 				return s;
@@ -250,7 +250,7 @@ public class PeopleMover {
 	 * @param p - The point
 	 * @return LoadingDock at position p
 	 */
-	public LoadingDock getLoadingDockAtPoint(Point p) {
+	private LoadingDock getLoadingDockAtPoint(Point p) {
 		for(LoadingDock d : getLoadingDocks())
 			if(d.getPosition().equals(p))
 				return d;
@@ -265,7 +265,7 @@ public class PeopleMover {
 	 * @param r - The random generator used by the roadModel
 	 * @param simulator - The specific simulation instance
 	 */
-	public void addRandomUser(RoadModel roadModel, RandomGenerator r, Simulator simulator) {
+	private void addRandomUser(RoadModel roadModel, RandomGenerator r, Simulator simulator) {
 		
 		// Get a random startposition on the graph.
 		Point startPosition = roadModel.getRandomPosition(r);
@@ -300,12 +300,8 @@ public class PeopleMover {
 	 * Getters and setters
 	 */
 	
-	public ArrayList<LoadingDock> getLoadingDocks() {
+	private ArrayList<LoadingDock> getLoadingDocks() {
 		return loadingDocks;
-	}
-
-	public void setLoadingDocks(ArrayList<LoadingDock> loadingDocks) {
-		this.loadingDocks = loadingDocks;
 	}
 	
 	public static ArrayList<Double> getDelays() {
@@ -320,7 +316,7 @@ public class PeopleMover {
 		PeopleMover.usersOnTime = usersOnTime;
 	}
 	
-	public ArrayList<Station> getStations() {
+	private ArrayList<Station> getStations() {
 		return stations;
 	}
 }

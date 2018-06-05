@@ -26,9 +26,9 @@ class Pod extends Vehicle {
 	// The pod speed.
 	private static final double SPEED = 200d;
 	// The amount a battery gets drained per tick if its moving.
-	private static final double BATTERY_DRAIN = 1;
+	private static final double BATTERY_DRAIN = 0.05;
 	// The amount a battery gets charged per tick when at a loading dock.
-	private static final double BATTERY_GAIN = 0.1;
+	private static final double BATTERY_GAIN = 0.5;
 	// The threshold  on which the pod will go recharge.
 	private static final double BATTERY_THRESHOLD = 35;
 	
@@ -330,6 +330,7 @@ class Pod extends Vehicle {
 	private LinkedHashMap<Station, Long> findBestIntentionAdvanced() {
 		LinkedHashMap<Station, Long> best = null;
 		int bestNumPass = 0;
+		long deliveryTime = Long.MAX_VALUE;
 		ArrayList<Station> passengerDestinations = new ArrayList<>();
 		
 		// Create a list of all passenger destinations.
@@ -340,8 +341,10 @@ class Pod extends Vehicle {
 		// Determine the best intention.
 		for(LinkedHashMap<Station, Long> intention : getIntentions()) {
 			int numPass = calculateDestinationsOnRoute(intention, passengerDestinations);
-			if(numPass > bestNumPass) {
+			long delivery = intention.values().iterator().next();
+			if(numPass >= bestNumPass && delivery < deliveryTime) {
 				bestNumPass = numPass;
+				deliveryTime = delivery;
 				best = intention;
 			}
 			
