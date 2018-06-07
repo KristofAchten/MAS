@@ -1,5 +1,8 @@
 package rinsim;
 
+import java.awt.AWTException;
+import java.awt.Robot;
+import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -27,8 +30,6 @@ public class PeopleMover {
 	
 	// Are we currently debugging? -> will enable informative printouts.
 	public static final boolean DEBUGGING = false;
-	// Show experiment results. Best to not use this together with the DEBUGGING flag enabled because of spam.
-	public static final boolean EXPERIMENTING = false;
 	// The number of users at the start of the simulation.
 	private static final int NUM_USERS = 5;
 	// The number of seats per pod.
@@ -43,7 +44,9 @@ public class PeopleMover {
 	private static int MAX_USERS = 30;
 	// The delivery deadline that we should try to meet for each user.
 	private static int DELIVERY_DEADLINE = 3600000; // 1 hour
-	
+	// Show experiment results. Best to not use this together with the DEBUGGING flag enabled because of spam.
+	public static boolean EXPERIMENTING = false;
+
 	// The starting positions that contain a loading dock and spawn a pod initially.
 	private static final Point[] startPos = {new Point(0, 0), new Point(7.2, 2.6), new Point(13.7, 7)};
 	
@@ -55,14 +58,14 @@ public class PeopleMover {
 	
 	
 	
-	public static void main(String[] args) throws URISyntaxException, IOException {
+	public static void main(String[] args) throws URISyntaxException, IOException, AWTException {
 		PeopleMover pm = new PeopleMover();
 		pm.run(0);
 	}
 	
 	PeopleMover() {}
 	
-	public void run(final long maxTime) throws URISyntaxException, IOException {
+	public void run(final long maxTime) throws URISyntaxException, IOException, AWTException {
 	
 		// Create the graph.
 		GraphModel gm = new GraphModel();
@@ -189,7 +192,7 @@ public class PeopleMover {
 			@Override
 			public void afterTick(TimeLapse timeLapse) {}
 		});
-		
+				
 		simulator.start();
 	}
 
@@ -234,17 +237,30 @@ public class PeopleMover {
 	 * @return The builder-instance used to create the GUI.
 	 */
 	 private static View.Builder createGui() {
-		    View.Builder view = View.builder()
-		      .with(GraphRoadModelRenderer.builder())
-		      .with(RoadUserRenderer.builder()		      
-		    		  .withImageAssociation(User.class, "/littlewouter.png")
-		    		  .withImageAssociation(Pod.class, "/graphics/flat/taxi-32.png")
-		    		  .withImageAssociation(Station.class, "/graphics/flat/bus-stop-icon-32.png")
-		    		  .withImageAssociation(LoadingDock.class, "/graphics/perspective/tall-building-64.png"))
-		      //.withFullScreen()
-		      .withTitleAppendix("People Mover 2000");
-		    return view;
+		 if(isEXPERIMENTING()) {
+			    View.Builder view = View.builder()	
+			      .withSpeedUp(150)
+			      .withAutoPlay()
+			      .with(GraphRoadModelRenderer.builder())
+			      .with(RoadUserRenderer.builder()		      
+			    		  .withImageAssociation(User.class, "/littlewouter.png")
+			    		  .withImageAssociation(Pod.class, "/graphics/flat/taxi-32.png")
+			    		  .withImageAssociation(Station.class, "/graphics/flat/bus-stop-icon-32.png")
+			    		  .withImageAssociation(LoadingDock.class, "/graphics/perspective/tall-building-64.png"))
+			      .withTitleAppendix("People Mover 2000");
+			    return view;
+		  } else {
+			    View.Builder view = View.builder()	
+					      .with(GraphRoadModelRenderer.builder())
+					      .with(RoadUserRenderer.builder()		      
+					    		  .withImageAssociation(User.class, "/littlewouter.png")
+					    		  .withImageAssociation(Pod.class, "/graphics/flat/taxi-32.png")
+					    		  .withImageAssociation(Station.class, "/graphics/flat/bus-stop-icon-32.png")
+					    		  .withImageAssociation(LoadingDock.class, "/graphics/perspective/tall-building-64.png"))
+					      .withTitleAppendix("People Mover 2000");
+			    return view;
 		  }
+	 }
 	
 	/**
 	 * Returns the station at a given point in the graph (if there is one).
@@ -370,4 +386,13 @@ public class PeopleMover {
 	public static void setDelays(ArrayList<Double> delays) {
 		PeopleMover.delays = delays;
 	}
+	
+	public static boolean isEXPERIMENTING() {
+		return EXPERIMENTING;
+	}
+
+	public static void setEXPERIMENTING(boolean eXPERIMENTING) {
+		EXPERIMENTING = eXPERIMENTING;
+	}
 }
+
