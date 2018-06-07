@@ -1,0 +1,99 @@
+Experiments with basic planning, spawn rate 0.001
+
+Users delivered on time: 83
+Users not delivered on time: 2
+
+Average delay: 1315524.5 milliseconds or 0 hours, 21 minutes and 55 second(s).
+========================================================================================================================================
+
+
+Experiments with basic planning, spawn rate 0.005
+
+Users delivered on time: 220
+Users not delivered on time: 79
+
+Average delay: 5277452.405063291 milliseconds or 1 hours, 27 minutes and 57 second(s).
+========================================================================================================================================
+
+
+Experiments with basic planning, spawn rate 0.009999999999999998
+
+Users delivered on time: 293
+Users not delivered on time: 251
+
+Average delay: 8136774.370517928 milliseconds or 2 hours, 15 minutes and 36 second(s).
+========================================================================================================================================
+
+
+Experiments with basic planning, spawn rate 0.015
+
+Users delivered on time: 275
+Users not delivered on time: 300
+
+Average delay: 8544028.786666667 milliseconds or 2 hours, 22 minutes and 24 second(s).
+========================================================================================================================================
+
+
+Experiments with basic planning, spawn rate 0.02
+
+Users delivered on time: 231
+Users not delivered on time: 324
+
+Average delay: 8911129.641975308 milliseconds or 2 hours, 28 minutes and 31 second(s).
+========================================================================================================================================
+
+
+Experiments with basic planning, spawn rate 0.025
+
+Users delivered on time: 264
+Users not delivered on time: 333
+
+Average delay: 8561025.174174175 milliseconds or 2 hours, 22 minutes and 41 second(s).
+========================================================================================================================================
+
+
+Experiments with basic planning, spawn rate 0.030000000000000002
+
+Users delivered on time: 266
+Users not delivered on time: 299
+
+Average delay: 9653200.301003344 milliseconds or 2 hours, 40 minutes and 53 second(s).
+========================================================================================================================================
+
+
+Experiments with basic planning, spawn rate 0.035
+
+Users delivered on time: 248
+Users not delivered on time: 299
+
+Average delay: 1.0231143361204013E7 milliseconds or 2 hours, 50 minutes and 31 second(s).
+========================================================================================================================================
+
+
+Experiments with basic planning, spawn rate 0.04
+
+Users delivered on time: 270
+Users not delivered on time: 323
+
+Average delay: 9153101.53869969 milliseconds or 2 hours, 32 minutes and 33 second(s).
+========================================================================================================================================
+
+
+Experiments with basic planning, spawn rate 0.045
+
+Users delivered on time: 266
+Users not delivered on time: 300
+
+Average delay: 1.000435895E7 milliseconds or 2 hours, 46 minutes and 44 second(s).
+========================================================================================================================================
+
+
+Experiments with basic planning, spawn rate 0.049999999999999996
+
+Users delivered on time: 259
+Users not delivered on time: 350
+
+Average delay: 8619353.214285715 milliseconds or 2 hours, 23 minutes and 39 second(s).
+========================================================================================================================================
+
+

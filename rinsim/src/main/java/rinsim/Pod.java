@@ -26,9 +26,9 @@ class Pod extends Vehicle {
 	// The pod speed.
 	private static final double SPEED = 200d;
 	// The amount a battery gets drained per tick if its moving.
-	private static final double BATTERY_DRAIN = 0.01;
+	private static final double BATTERY_DRAIN = 0.005;
 	// The amount a battery gets charged per tick when at a loading dock.
-	private static final double BATTERY_GAIN = 1;
+	private static final double BATTERY_GAIN = 0.5;
 	// The threshold  on which the pod will go recharge.
 	private static final double BATTERY_THRESHOLD = 50;
 	

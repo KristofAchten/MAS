@@ -1,8 +1,8 @@
 package rinsim;
 
 import java.awt.AWTException;
-import java.awt.Robot;
-import java.awt.event.KeyEvent;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -60,12 +60,12 @@ public class PeopleMover {
 	
 	public static void main(String[] args) throws URISyntaxException, IOException, AWTException {
 		PeopleMover pm = new PeopleMover();
-		pm.run(0);
+		pm.run(0, null);
 	}
 	
 	PeopleMover() {}
 	
-	public void run(final long maxTime) throws URISyntaxException, IOException, AWTException {
+	public void run(final long maxTime, final String path) throws URISyntaxException, IOException, AWTException {
 	
 		// Create the graph.
 		GraphModel gm = new GraphModel();
@@ -134,18 +134,30 @@ public class PeopleMover {
 			public void tick(TimeLapse timeLapse) {
 				
 				if(maxTime != 0)
-					if(timeLapse.getEndTime() >= maxTime) {
-						System.out.println("Users delivered on time: " + PeopleMover.getUsersOnTime());
-						System.out.println("Users not delivered on time: " + PeopleMover.getDelays().size());
-						
-						double sum = 0;
-						for(double d : PeopleMover.getDelays())
-							sum += d;
-						double average = sum/PeopleMover.getDelays().size();
-						
-						System.out.println("Average delay: " + average + " milliseconds or " + (int) ((average / (1000*60)) % 60) + " minutes "
-								+ "and " + (int) ((average / 1000) % 60) + " second(s).\n");
-						System.exit(0);
+					if(timeLapse.getEndTime() >= maxTime) {			
+						try {
+							BufferedWriter output = new BufferedWriter(new FileWriter(path, true));
+							if(PeopleMover.ADVANCED_PLANNING)
+								output.append("Experiments with advanced planning, spawn rate " + PeopleMover.getSPAWN_RATE() + "\n\n");
+							else
+								output.append("Experiments with basic planning, spawn rate " + PeopleMover.getSPAWN_RATE() + "\n\n");
+
+							output.append("Users delivered on time: " + PeopleMover.getUsersOnTime() + "\n");
+							output.append("Users not delivered on time: " + PeopleMover.getDelays().size() + "\n\n");
+							
+							double sum = 0;
+							for(double d : PeopleMover.getDelays())
+								sum += d;
+							double average = sum/PeopleMover.getDelays().size();
+							
+							output.append("Average delay: " + average + " milliseconds or " + (int) ((average / (1000*60*60)) % 24) + " hours, " + (int) ((average / (1000*60)) % 60) + " minutes "
+									+ "and " + (int) ((average / 1000) % 60) + " second(s).\n");							
+							output.append("========================================================================================================================================\n\n\n");
+							output.close();
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+						simulator.stop();
 					}
 					
 				
@@ -241,6 +253,7 @@ public class PeopleMover {
 			    View.Builder view = View.builder()	
 			      .withSpeedUp(150)
 			      .withAutoPlay()
+			      .withAutoClose()
 			      .with(GraphRoadModelRenderer.builder())
 			      .with(RoadUserRenderer.builder()		      
 			    		  .withImageAssociation(User.class, "/littlewouter.png")

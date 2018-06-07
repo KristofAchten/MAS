@@ -1,0 +1,99 @@
+Experiments with advanced planning, spawn rate 0.001
+
+Users delivered on time: 86
+Users not delivered on time: 2
+
+Average delay: 823900.5 milliseconds or 0 hours, 13 minutes and 43 second(s).
+========================================================================================================================================
+
+
+Experiments with advanced planning, spawn rate 0.005
+
+Users delivered on time: 240
+Users not delivered on time: 90
+
+Average delay: 4662231.488888889 milliseconds or 1 hours, 17 minutes and 42 second(s).
+========================================================================================================================================
+
+
+Experiments with advanced planning, spawn rate 0.01
+
+Users delivered on time: 358
+Users not delivered on time: 257
+
+Average delay: 7699691.521400779 milliseconds or 2 hours, 8 minutes and 19 second(s).
+========================================================================================================================================
+
+
+Experiments with advanced planning, spawn rate 0.015
+
+Users delivered on time: 403
+Users not delivered on time: 300
+
+Average delay: 8238354.6866666665 milliseconds or 2 hours, 17 minutes and 18 second(s).
+========================================================================================================================================
+
+
+Experiments with advanced planning, spawn rate 0.02
+
+Users delivered on time: 435
+Users not delivered on time: 297
+
+Average delay: 8282780.387205387 milliseconds or 2 hours, 18 minutes and 2 second(s).
+========================================================================================================================================
+
+
+Experiments with advanced planning, spawn rate 0.025
+
+Users delivered on time: 447
+Users not delivered on time: 306
+
+Average delay: 7128842.290849674 milliseconds or 1 hours, 58 minutes and 48 second(s).
+========================================================================================================================================
+
+
+Experiments with advanced planning, spawn rate 0.030
+
+Users delivered on time: 371
+Users not delivered on time: 358
+
+Average delay: 7575493.402234637 milliseconds or 2 hours, 6 minutes and 15 second(s).
+========================================================================================================================================
+
+
+Experiments with advanced planning, spawn rate 0.035
+
+Users delivered on time: 419
+Users not delivered on time: 334
+
+Average delay: 8138257.410179641 milliseconds or 2 hours, 15 minutes and 38 second(s).
+========================================================================================================================================
+
+
+Experiments with advanced planning, spawn rate 0.04
+
+Users delivered on time: 354
+Users not delivered on time: 314
+
+Average delay: 8614200.203821655 milliseconds or 2 hours, 23 minutes and 34 second(s).
+========================================================================================================================================
+
+
+Experiments with advanced planning, spawn rate 0.045
+
+Users delivered on time: 399
+Users not delivered on time: 315
+
+Average delay: 8613019.228571428 milliseconds or 2 hours, 23 minutes and 33 second(s).
+========================================================================================================================================
+
+
+Experiments with advanced planning, spawn rate 0.05
+
+Users delivered on time: 411
+Users not delivered on time: 323
+
+Average delay: 7795497.114551083 milliseconds or 2 hours, 9 minutes and 55 second(s).
+========================================================================================================================================
+
+
