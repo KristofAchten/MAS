@@ -30,7 +30,7 @@ class Pod extends Vehicle {
 	// The amount a battery gets charged per tick when at a loading dock.
 	private static final double BATTERY_GAIN = 1;
 	// The threshold  on which the pod will go recharge.
-	private static final double BATTERY_THRESHOLD = 35;
+	private static final double BATTERY_THRESHOLD = 50;
 	
 	
 	// List of reservations for which the pod is currently routing.
@@ -48,7 +48,6 @@ class Pod extends Vehicle {
 	private TimeWindow currentWindow = null;
 	
 	private long lastRefresh = 0;
-	private long lastMove = 0;
 		
 	Random r = new Random();
 	
@@ -69,14 +68,13 @@ class Pod extends Vehicle {
 		PDPModel pm = getPDPModel();
 		
 		if(getBattery() <= 0) { 
-			System.err.println("FAIL: The pod at position " + rm.getPosition(this) + " has run out of juice! :-(");
+			System.err.println("FAIL: The pod at position " + rm.getPosition(this) + " has run out of juice! He had " + getPassengers().size() + " passengers :-(");
 			System.exit(1);
 		}
 		
 		// Only move if there is a next hop, our reservation time is respected and the battery is not zero.
 		if(!movingQueue.isEmpty() && currentWindow.isIn(time.getTime()) && getBattery() > 0) {
 			rm.followPath(this, movingQueue, time);
-			setLastMove(time.getTime());
 			setBattery(getBattery() - BATTERY_DRAIN);
 		}
 		
@@ -112,13 +110,9 @@ class Pod extends Vehicle {
 		// Only do this each 1.5s instead of every tick for performance.
 		
 		long currentTime = time.getTime();
-		if((((currentTime - getLastMove()) > 600000) || (getDesire().isEmpty() && movingQueue.isEmpty())) && (currentTime - getLastRefresh() > 90000)) {
+		if(getDesire().isEmpty() && movingQueue.isEmpty() && currentTime - getLastRefresh() > 90000) {
 			Station dest = null;
 			setLastRefresh(currentTime);
-			
-			// Reset the desire if the pod is retrying because of inactivity. This for possible deadlock resolution.
-			if(currentTime - getLastMove() > 10000)
-				getDesire().clear();
 
 			// If a certain threshold is reached, start moving towards a loadingdock.
 			if(getBattery() < BATTERY_THRESHOLD && getPassengers().isEmpty()) {
@@ -528,14 +522,6 @@ class Pod extends Vehicle {
 
 	public void setCurrentLoadingDock(LoadingDock currentLoadingDock) {
 		this.currentLoadingDock = currentLoadingDock;
-	}
-	
-	public long getLastMove() {
-		return lastMove;
-	}
-
-	public void setLastMove(long lastMove) {
-		this.lastMove = lastMove;
 	}
 
 	public long getLastRefresh() {

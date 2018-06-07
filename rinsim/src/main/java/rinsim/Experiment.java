@@ -11,7 +11,7 @@ public class Experiment {
 	// The probability of a new user spawning.
 	private static final double SPAWN_RATE = 0.05;
 	// The maximal number of users on the graph at any time. Can be overridden by NUM_USERS.
-	private static final int MAX_USERS = 30;
+	private static final int MAX_USERS = 100;
 	// The delivery deadline that we should try to meet for each user.
 	private static final int DELIVERY_DEADLINE = 7200000; // 2 hours
 	
