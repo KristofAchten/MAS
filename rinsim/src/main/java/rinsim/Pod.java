@@ -26,9 +26,9 @@ class Pod extends Vehicle {
 	// The pod speed.
 	private static final double SPEED = 200d;
 	// The amount a battery gets drained per tick if its moving.
-	private static final double BATTERY_DRAIN = 0.05;
+	private static final double BATTERY_DRAIN = 0.01;
 	// The amount a battery gets charged per tick when at a loading dock.
-	private static final double BATTERY_GAIN = 0.5;
+	private static final double BATTERY_GAIN = 1;
 	// The threshold  on which the pod will go recharge.
 	private static final double BATTERY_THRESHOLD = 35;
 	
@@ -121,7 +121,7 @@ class Pod extends Vehicle {
 				getDesire().clear();
 
 			// If a certain threshold is reached, start moving towards a loadingdock.
-			if(getBattery() < BATTERY_THRESHOLD) {
+			if(getBattery() < BATTERY_THRESHOLD && getPassengers().isEmpty()) {
 				if(getCurrentStation().getLoadingDocks().isEmpty())
 					dest = null;
 				else {
@@ -156,6 +156,8 @@ class Pod extends Vehicle {
 						}
 						
 						// Make it the desire, and let the remainder of this method know that we've already done this.
+						
+						
 						makeReservations(curBest);
 						improvedRouting = true;
 					} else {
@@ -331,7 +333,7 @@ class Pod extends Vehicle {
 		for(LinkedHashMap<Station, Long> intention : getIntentions()) {
 			int numPass = calculateDestinationsOnRoute(intention, passengerDestinations);
 			long delivery = intention.values().iterator().next();
-			if(numPass >= bestNumPass && delivery < deliveryTime) {
+			if((numPass > bestNumPass) || (numPass == bestNumPass && delivery < deliveryTime)) {
 				bestNumPass = numPass;
 				deliveryTime = delivery;
 				best = intention;
