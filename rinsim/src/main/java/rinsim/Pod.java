@@ -260,23 +260,12 @@ class Pod extends Vehicle {
 				toRemove.add(u);
 				pm.deliver(this, u, time);
 				
-				if(PeopleMover.EXPERIMENTING) {
-					double delay = time.getTime() - u.getDeadline();
-					if(delay > 0)
-						PeopleMover.getDelays().add(delay);
-					else
-						PeopleMover.setUsersOnTime(PeopleMover.getUsersOnTime() + 1);
-					
-					System.out.println("Users delivered on time: " + PeopleMover.getUsersOnTime());
-					System.out.println("Users not delivered on time: " + PeopleMover.getDelays().size());
-					
-					double sum = 0;
-					for(double d : PeopleMover.getDelays())
-						sum += d;
-					
-					System.out.println("Average delay: " + sum/PeopleMover.getDelays().size() + "\n");
-				}
-
+				double delay = time.getTime() - u.getDeadline();
+				if(delay > 0)
+					PeopleMover.getDelays().add(delay);
+				else
+					PeopleMover.setUsersOnTime(PeopleMover.getUsersOnTime() + 1);
+				
 				if(PeopleMover.DEBUGGING) {
 					System.out.print("Ik zie een driekwartsbroek... User with destination " + u.getDeliveryLocation() + "has arrived at "
 							+ rm.getPosition(this));

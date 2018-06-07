@@ -29,20 +29,20 @@ public class PeopleMover {
 	public static final boolean DEBUGGING = false;
 	// Show experiment results. Best to not use this together with the DEBUGGING flag enabled because of spam.
 	public static final boolean EXPERIMENTING = false;
-	// Are we currently using the sophisticated task planning algorithm?
-	public static final boolean ADVANCED_PLANNING = false;
 	// The number of users at the start of the simulation.
 	private static final int NUM_USERS = 5;
 	// The number of seats per pod.
 	private static final int MAX_PODCAPACITY = 4;
 	// The number of charging spaces per charging dock.
 	private static final int MAX_CHARGECAPACITY = 1; 
+	// Are we currently using the sophisticated task planning algorithm?
+	public static boolean ADVANCED_PLANNING = false;
 	// The probability of a new user spawning.
-	private static final double SPAWN_RATE = 0.05;
+	private static double SPAWN_RATE = 0.05;
 	// The maximal number of users on the graph at any time. Can be overridden by NUM_USERS.
-	private static final int MAX_USERS = 30;
+	private static int MAX_USERS = 30;
 	// The delivery deadline that we should try to meet for each user.
-	private static final int DELIVERY_DEADLINE = 3600000; // 1 hour
+	private static int DELIVERY_DEADLINE = 3600000; // 1 hour
 	
 	// The starting positions that contain a loading dock and spawn a pod initially.
 	private static final Point[] startPos = {new Point(0, 0), new Point(7.2, 2.6), new Point(13.7, 7)};
@@ -57,12 +57,12 @@ public class PeopleMover {
 	
 	public static void main(String[] args) throws URISyntaxException, IOException {
 		PeopleMover pm = new PeopleMover();
-		pm.run();
+		pm.run(0);
 	}
 	
 	PeopleMover() {}
 	
-	private void run() throws URISyntaxException, IOException {
+	public void run(final long maxTime) throws URISyntaxException, IOException {
 	
 		// Create the graph.
 		GraphModel gm = new GraphModel();
@@ -129,6 +129,22 @@ public class PeopleMover {
 		simulator.addTickListener(new TickListener() {
 			@Override
 			public void tick(TimeLapse timeLapse) {
+				
+				if(maxTime != 0)
+					if(timeLapse.getEndTime() >= maxTime) {
+						System.out.println("Users delivered on time: " + PeopleMover.getUsersOnTime());
+						System.out.println("Users not delivered on time: " + PeopleMover.getDelays().size());
+						
+						double sum = 0;
+						for(double d : PeopleMover.getDelays())
+							sum += d;
+						double average = sum/PeopleMover.getDelays().size();
+						
+						System.out.println("Average delay: " + average + " milliseconds or " + (int) ((average / (1000*60)) % 60) + " minutes "
+								+ "and " + (int) ((average / 1000) % 60) + " second(s).\n");
+						System.exit(0);
+					}
+					
 				
 				// Spawn a new user at a predefined rate, but only when the max number of users has not been reached yet.
 				if(r.nextDouble() < SPAWN_RATE && roadModel.getObjectsOfType(User.class).size() < MAX_USERS) {
@@ -318,5 +334,40 @@ public class PeopleMover {
 	
 	private ArrayList<Station> getStations() {
 		return stations;
+	}
+	public static boolean isADVANCED_PLANNING() {
+		return ADVANCED_PLANNING;
+	}
+
+	public static void setADVANCED_PLANNING(boolean aDVANCED_PLANNING) {
+		ADVANCED_PLANNING = aDVANCED_PLANNING;
+	}
+
+	public static double getSPAWN_RATE() {
+		return SPAWN_RATE;
+	}
+
+	public static void setSPAWN_RATE(double sPAWN_RATE) {
+		SPAWN_RATE = sPAWN_RATE;
+	}
+
+	public static int getMAX_USERS() {
+		return MAX_USERS;
+	}
+
+	public static void setMAX_USERS(int mAX_USERS) {
+		MAX_USERS = mAX_USERS;
+	}
+
+	public static int getDELIVERY_DEADLINE() {
+		return DELIVERY_DEADLINE;
+	}
+
+	public static void setDELIVERY_DEADLINE(int dELIVERY_DEADLINE) {
+		DELIVERY_DEADLINE = dELIVERY_DEADLINE;
+	}
+
+	public static void setDelays(ArrayList<Double> delays) {
+		PeopleMover.delays = delays;
 	}
 }
